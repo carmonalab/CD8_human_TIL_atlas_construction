@@ -9,7 +9,8 @@ This project is aimed at constructing a scRNA-seq human T cell reference. Our ai
 
 - The reference will serve as a basis to understand currently overlooked parallels between mice and human settings, and serve as a consistent reference to name clusters across studies.
 
-![image](https://user-images.githubusercontent.com/34238952/188863492-1ad691b7-af38-49d0-970b-ee15b850432f.png)
+![Capture d’écran 2023-02-03 à 15 36 20](https://user-images.githubusercontent.com/34238952/217870428-d60484ff-36fb-4b16-98b8-026b9f2254d6.png)
+
 
 Integration using ssSTACAS https://carmonalab.github.io/STACAS.demo/STACAS.demo.html#semi-supervised-integration
 ![Capture d’écran 2023-02-03 à 15 21 24](https://user-images.githubusercontent.com/34238952/216626818-af97baa7-d4d9-4de9-a04a-62e8befdb5d3.png)
