@@ -1,0 +1,795 @@
+---
+title: "QC CD8 TIL atlas"
+author: "Paul Gueguen <paul.gueguen@unil.ch>"
+date: "`r format(Sys.Date(),'%e de %B, %Y')`"
+output: 
+  rmdformats::downcute:
+    lightbox: true
+    thumbnails: false
+    self_contained: true
+    gallery: true
+    code_folding: show
+  pkgdown:
+    as_is: true
+---
+
+```{r, include=FALSE, fig.width=16, fig.height=12}
+renv::restore()
+library(Seurat)
+library(ggplot2)
+library(scGate)
+library(dittoSeq)
+library(STACAS)
+library(SignatuR)
+library(scIntegrationMetrics)
+library(UCell)
+library(patchwork)
+library(tidyr)
+library(dplyr)
+library(SingleCellExperiment)
+#options(future.globals.maxSize= 5000*1024^2)  # Can be needed if running Seurat in parallel
+```
+
+------------------------------------------------------------------------
+
+A pipeline to select high-quality cells and samples for reference map construction.
+
+# Sanitising and filtering N.Borcherding CD8+ TIL dataset collection
+
+This notebook conducts the following processing steps:
+
+-   1-Load datasets as Seurat objects from [N.Borcherding TIL reference](https://github.com/ncborcherding/utility).
+
+-   2-Homogenize gene names with `standardizeGeneSymbols` function.
+
+-   3-Remove small sample to speed up the analysis
+
+-   4-Remove doublets as annotated by scDblFinder
+
+-   5-Filter pure CD8+ T cells using `scGate` (and remove innate-like T cells).
+
+-   6-Remove cells with strong subtype-confounding signals of biological processes: cell cycle, response to interferons, and to heat-shock using `UCell` scores.
+
+-   7-Keep only sufficiently large samples (\>min.cells.perSample).
+
+-   8-Downsample very large samples (\>max.cells.perSample) to limit the contribution of individual big samples.
+
+-   9-Select samples with strong and broad biological signals according to prior knowledge. This is computed as silhouette coefficients for previously known CD8+ TIL subtypes, predicted by `scGate`.
+
+-   10-Optionally we select the tissue for downstream analyses
+
+-   11-Homogenize representation of tumor-types
+
+-   12-Final summary statistics.
+
+    ![](images/paste-5FECB981.png)
+
+------------------------------------------------------------------------
+
+## Memory parameters
+
+To run within a terminal if needed. This step changes the .Renviron file settings.
+
+`cd ~`
+
+`touch .Renviron`
+
+`open .Renviron`
+
+Finally you can enter the maximum memory parameter than you want into the .Renviron file. 200Gb works well in my case on a 64Gb M1 macbook.
+
+`R_MAX_VSIZE=200Gb`
+
+## Setup parameters
+
+```{r}
+min.cells.perSample <- 500
+min.pure.cells.perSample <- 500
+max.cells.perSample <- 5000
+max.cells.per.subtype <- 500
+min_subtype_Silhouette <- 0.1
+min_subtypes_hiSil <- 2
+nPCAdim <- 15
+nFeatures <- 500
+n_selected_datasets <- 20
+```
+
+## Set the paths
+
+```{r}
+path_input <- '~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/data/processedData/individualSeurat/rds/'
+path_output <- "./out/"
+dir.create(path_output)
+path_cache <- "./cache/"
+dir.create(path_cache)
+path_plots <- "./plots/"
+dir.create(path_plots)
+```
+
+## Setup colors
+
+```{r}
+colors.scgate <- c("CD8_EM" = "seagreen3",
+                   "CD8_TEX" = "goldenrod1",
+                   "CD8_TPEX" = "mediumpurple1",
+                   "CD8_TEMRA" = "sienna",
+                   "CD8_N" = "lightblue2",
+                   "CD8_MAIT" = "pink2")
+```
+
+------------------------------------------------------------------------
+
+# 1-Loading datasets
+
+Here we are using v 0.4 of the Nick reference database as a list of Seurat objects.
+
+![](images/paste-F0CC0659.png)
+
+Image: capture from [Nick.B github](https://github.com/ncborcherding/utility/tree/dev) showing the naming nomenclature for each sample.
+
+```{r}
+# Read datasets one by one for v0.4 data
+files <- list.files(path = path_input)
+seurat.list <- lapply(paste0(path_input, files), readRDS)
+names(seurat.list) <- gsub(x = files, pattern = ".rds", replacement = "")
+
+# Load metadata
+meta <- readxl::read_xlsx('~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/summaryInfo/sample.directory.xlsx')
+
+# Sort metadata by Samplelabel
+meta <- meta |> arrange(SampleLabel)
+
+# Add metadata
+for (i in 1:length(seurat.list)){
+  metadata <- as.data.frame(do.call("rbind", replicate(dim(seurat.list[[i]])[2],
+                                                       as.character(meta[i,]), simplify = FALSE)))
+  names(metadata) <- colnames(meta)
+  old.meta <- seurat.list[[i]]@meta.data
+  seurat.list[[i]]@meta.data <- cbind(old.meta , metadata)
+}
+
+# Number of cells
+ncells <- unlist(lapply(seurat.list, ncol))
+hist(ncells, breaks = 50)
+
+# Remove small samples
+keep <- names(ncells[ncells>min.cells.perSample])
+seurat.list <- seurat.list[keep]
+
+print(paste0("Number of cells at step 1 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+```
+
+Basic QC
+
+```{r fig.width=14, fig.height=6}
+stats <- lapply(names(seurat.list), function(n){
+  x <- seurat.list[[n]]
+  x$Study <- n
+  x@meta.data[,c("Study","nCount_RNA","nFeature_RNA","mito.genes")]
+})
+stats <- Reduce(rbind, stats)
+
+quantile(stats$nCount_RNA, probs=c(0,0.01,0.02,0.05,0.1,0.5,0.9,0.95,0.98,0.99,1))
+quantile(stats$nFeature_RNA, probs=c(0,0.01,0.02,0.05,0.1,0.5,0.9,0.95,0.98,0.99,1))
+
+
+a <- ggplot(stats, aes(x=Study, y=nCount_RNA)) + geom_violin(scale = "width") +
+  theme_bw() + ggtitle("nCount_RNA") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+b <- ggplot(stats, aes(x=Study, y=nFeature_RNA)) + geom_violin(scale = "width") +
+  theme_bw() + ggtitle("nFeature_RNA") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+c <- ggplot(stats, aes(x=Study, y=mito.genes)) + geom_violin(scale = "width") +
+  theme_bw() + ggtitle("mito.genes") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+a / b / c
+
+ggsave("plots/NickB_QC.png", height=8, width=60, limitsize = FALSE)
+```
+
+Remove outlier cells in terms of UMI counts and detected genes
+
+```{r}
+thr <- list()
+
+thr$max.genes <- 5000
+thr$min.genes <- 300
+thr$max.umi <- 20000
+thr$min.umi <- 500
+
+seurat.list <- lapply(seurat.list, function(x){
+ subset(x, nCount_RNA > thr$min.umi &
+          nCount_RNA < thr$max.umi &
+          nFeature_RNA > thr$min.genes &
+          nFeature_RNA < thr$max.genes)
+})
+ncells <- unlist(lapply(seurat.list, ncol))
+
+sum(ncells)
+```
+
+# 2-Homogenize gene names
+
+```{r}
+library(data.table)
+EnsemblGeneFile = "aux/EnsemblGenes105_Hsa_GRCh38.p13.txt.gz"
+
+# Homogenize features
+for(i in names(seurat.list)){
+  print(i) 
+  seurat.list[[i]] <- STACAS:::standardizeGeneSymbols(seurat.list[[i]], EnsemblGeneFile = EnsemblGeneFile)
+}
+```
+
+# 3-Remove small samples
+
+```{r}
+cache_filename <- paste0(path_cache,"Step3.seurat.list.NickB.v0.4.rds")
+
+if (file.exists(cache_filename)) {
+  seurat.list <- readRDS(cache_filename)
+} else {
+  seurat.list.size <- unlist(sapply(seurat.list,
+                                    function(x) ncol(x)))
+  seurat.list <- seurat.list[which(seurat.list.size >= min.cells.perSample)]
+  saveRDS(seurat.list, cache_filename)
+}
+
+# Number of cells
+print(paste0("Number of cells at step 3 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+```
+
+# 4-Remove doublets
+
+Optional. We do not really know how doublets were calculated.
+
+```{r eval=F}
+seurat.list <- sapply(names(seurat.list),
+       FUN = function(x) {
+          #print(x)
+          seurat.list[[x]] <- subset(seurat.list[[x]], subset=db.class=="singlet")
+       }, USE.NAMES = T)
+
+# Number of cells
+print(paste0("Number of cells at step 4 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+```
+
+# 5-Subset on CD8 T cells
+
+## Running CD8+ T cell scGate model
+
+Several datasets contain other cells than T cells. Filter on CD8+ T cells only
+
+```{r, eval=T}
+cache_filename <- paste0(path_cache,"Step5.seurat.list.scGate_labels.rds")
+
+if (file.exists(cache_filename)) {
+  seurat.list <- readRDS(cache_filename)
+} else {
+  
+#  models <- scGate::get_scGateDB(branch = "dev", force_update = T)
+  models <- scGate::get_scGateDB(branch = "dev")
+  cd8.model <- models$human$generic$CD8TIL
+  
+  seurat.list <- sapply(names(seurat.list),
+                        FUN = function(x) {
+                          print(sprintf("#Running dataset %s", x))
+                          scGate(seurat.list[[x]], model=cd8.model, ncores=8)
+                        }, USE.NAMES = T)
+  saveRDS(seurat.list, cache_filename)
+}
+
+```
+
+See individual samples
+
+```{r}
+x <- seurat.list$BCT1.5
+
+x <- x |> NormalizeData() |>  FindVariableFeatures(nFeatures=500) |>
+  ScaleData() |> RunPCA(npcs=15) |> RunUMAP(dims=c(1:15))
+
+FeaturePlot(x, c("CD3D","CD3E","LCK","CD8A","CD4","FOXP3"), ncol=3)
+DimPlot(x)
+```
+
+## Filter CD8+ cells
+
+```{r, eval=T}
+cache_filename <- paste0(path_cache,"Step6.seurat.list.NickB.v0.4.CD8T.rds")
+
+print(paste0("Number of cells pre CD8 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+
+seurat.list <- lapply(seurat.list,
+       FUN = function(x) {
+          #print(x)
+          try(x <- subset(x, subset=is.pure=="Pure"))
+       })
+
+ncells <- unlist(lapply(seurat.list, ncol))
+
+print(paste0("Number of CD8 T cells: ", sum(ncells)))
+
+# Remove try-error objects (patient without CD8 cells detected and that returned an error)
+seurat.keep <- c()
+for (i in 1:length(seurat.list)){
+    x <- typeof(seurat.list[[i]])
+    print(x)
+  if(x == "S4"){
+    seurat.keep <- c(seurat.keep, names(seurat.list[i]))
+  }
+}
+seurat.list <- seurat.list[seurat.keep]
+
+# Number of cells
+print(paste0("Number of cells at step 6 filtering: ", sum(ncells)))
+saveRDS(seurat.list, cache_filename)
+```
+
+# 6-Remove cycling / IFN high cells
+
+```{r warning=F, message=F, eval=T}
+library(SignatuR)
+filter.signatures <- GetSignature(SignatuR$Hs)
+filter.signatures <- filter.signatures[c("cellCycle.G1S","cellCycle.G2M","IFN")]
+
+# Using manual signatures for IFN and HSP, which work better with UCell than the full signatures from SignatuR package
+filter.signatures[["IFN"]] <- c("ISG15","IFI6","IFI44L","MX1")
+#filter.signatures[["HSP"]] <-  c("HSPA1A","HSPA1B","JUNB")
+```
+
+### Evaluate signature strength using `UCell`
+
+```{r, eval=T}
+seurat.list <- lapply(seurat.list, function(x) {
+  print(levels(factor(x$SampleLabel)))
+  AddModuleScore_UCell(x, features = filter.signatures, ncores = 8,
+                       assay = "RNA", name = "")
+})
+```
+
+### Check distribution of these signatures across datasets
+
+```{r fig.height=10, fig.width=10, eval=F}
+p <- lapply(names(filter.signatures), function(s) {
+  ps <- lapply(names(seurat.list), function(d) {
+    title <- sprintf("%s - %s", s, d)
+    ucell_scores <- seurat.list[[d]]@meta.data[,s]
+    qplot(ucell_scores, geom="histogram", bins=30, main=title) + theme_bw()
+  })
+  names(ps) <- names(seurat.list)
+  ps
+})
+names(p) <- names(filter.signatures)
+
+#wrap_plots(p$cellCycle.G1S)
+#wrap_plots(p$cellCycle.G2M)
+#wrap_plots(p$IFN)
+#wrap_plots(p$HSP)
+```
+
+### Evaluate global statistics (all datasets together)
+
+```{r, eval=T}
+filter.signatures.scores <- lapply(names(filter.signatures), function(s) {
+  unlist(lapply(seurat.list, function(x) x@meta.data[s] ))
+})  
+names(filter.signatures.scores) <- names(filter.signatures)
+pp <- lapply(names(filter.signatures.scores),
+            function(x) qplot(as.numeric(filter.signatures.scores[[x]]), geom="histogram", bins=30, main=x) + theme_bw()
+)
+wrap_plots(pp)
+ggsave(paste0(path_plots,"filter.signatures.scores.global.signatuR.original.signatures.png"))
+```
+
+### Filter by `UCell` thresholds
+
+```{r}
+seurat.list <- lapply(seurat.list, function(x) {
+  try(subset(x, subset= cellCycle.G1S < 0.1 &
+               cellCycle.G2M < 0.1 &
+               IFN < 0.25))
+  })
+sum(unlist(lapply(seurat.list, ncol)))
+
+# Remove errors using the same method as before
+seurat.keep <- c()
+for (i in 1:length(seurat.list)){
+    x <- typeof(seurat.list[[i]])
+#    print(x)
+  if(x == "S4"){
+    seurat.keep <- c(seurat.keep, names(seurat.list[i]))
+  }
+}
+seurat.list <- seurat.list[seurat.keep]
+
+# Number of cells
+print(paste0("Number of cells at step 6 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+```
+
+# 7-Remove small samples (after filtering)
+
+```{r}
+# Histogram before filtering
+ncells <- lapply(seurat.list, ncol)
+hist(unlist(ncells), breaks = 100, main = "Size of datasets before filtering")
+
+# Remove samples with fewer than min.pure.cells.perSample 
+seurat.list.size <- unlist(lapply(seurat.list,function(x) ncol(x)))
+seurat.list <- seurat.list[seurat.list.size >= min.pure.cells.perSample]
+sum(unlist(lapply(seurat.list, ncol)))
+
+# Histogram after filtering
+ncells <- lapply(seurat.list, ncol)
+hist(unlist(ncells), breaks = 100, main = "Size of datasets after filtering")
+
+# Number of cells
+print(paste0("Number of cells at step 7 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+```
+
+# Do QC again on T cells only
+
+Removing outliers makes data more homogenous with the loss of only few cells
+
+```{r fig.width=14, fig.height=6}
+stats <- lapply(names(seurat.list), function(n){
+  x <- seurat.list[[n]]
+  x$Study <- n
+  x@meta.data[,c("Study","nCount_RNA","nFeature_RNA","mito.genes")]
+})
+stats <- Reduce(rbind, stats)
+
+quantile(stats$nCount_RNA, probs=c(0,0.01,0.02,0.05,0.1,0.5,0.9,0.95,0.98,0.99,1))
+quantile(stats$nFeature_RNA, probs=c(0,0.01,0.02,0.05,0.1,0.5,0.9,0.95,0.98,0.99,1))
+
+
+a <- ggplot(stats, aes(x=Study, y=nCount_RNA)) + geom_violin(scale = "width") +
+  theme_bw() + ggtitle("nCount_RNA") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+b <- ggplot(stats, aes(x=Study, y=nFeature_RNA)) + geom_violin(scale = "width") +
+  theme_bw() + ggtitle("nFeature_RNA") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+c <- ggplot(stats, aes(x=Study, y=mito.genes)) + geom_violin(scale = "width") +
+  theme_bw() + ggtitle("mito.genes") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+a / b / c
+
+ggsave("plots/NickB_QC.CD8Tcells.png", height=8, width=30, limitsize = FALSE)
+```
+
+Remove outlier cells in terms of UMI counts and detected genes.
+
+```{r}
+thr <- list()
+
+thr$max.genes <- 3000
+thr$min.genes <- 300
+thr$max.umi <- 10000
+thr$min.umi <- 500
+
+seurat.list <- lapply(seurat.list, function(x){
+ subset(x, nCount_RNA > thr$min.umi &
+          nCount_RNA < thr$max.umi &
+          nFeature_RNA > thr$min.genes &
+          nFeature_RNA < thr$max.genes)
+})
+ncells <- unlist(lapply(seurat.list, ncol))
+
+sum(ncells)
+
+# Save
+saveRDS(seurat.list, paste0(path_cache, "Step7.seurat.list.NickB.rds"))
+```
+
+# 8-Calculate cell type silhouette to prioritize heterogeneous samples (i.e. containing multiple cell types)
+
+## Compute scGate annotations
+
+In this step we compute the 6 scGate classes which are: T-N, T-EM, MAIT, T-PEX, T-EX, TEMRA.
+
+Note: FindVariableFeatures.STACAS removes very highly/very lowly expressed genes.
+
+```{r}
+#seurat.list <- readRDS(file = paste0(path_cache,"Step7.seurat.list.NickB.rds"))
+
+# Setup function to run scGate + seurat pipeline
+run_seurat <- function(x, bl=NULL, nfeat=1000, npca=30) {
+  
+  x <- x %>% NormalizeData(verbose=F) %>%  
+      FindVariableFeatures.STACAS(nfeat = nfeat, genesBlockList = bl) %>%
+      ScaleData(verbose=F) %>%
+      RunPCA(npcs=npca, verbose=F) %>% RunUMAP(dims=1:npca, verbose=F)
+
+  return(x)
+}
+
+# define a function using variable object_in
+run_scGate_CD8T <- function(x, models) {
+
+  x <- scGate(x, model=models, multi.asNA=T, ncores=8,
+           reduction="pca", assay = "RNA")
+
+  return(x)
+}
+```
+
+```{r}
+# Loading the object or else running scGate and Seurat pipeline
+cache_filename <- paste0(path_cache,"Step8.seurat.list.NickB.v0.4.scGate.classes.rds")
+
+scGate_models <- scGate::get_scGateDB(branch = "dev", force_update = T)
+#scGate_models <- scGate::get_scGateDB(branch = "dev")
+
+cd8.til.models <- scGate_models$human$CD8_TIL
+cd8.til.models <- cd8.til.models[names(cd8.til.models) %in% c("CD8_Tinn","CD8_TRM") == FALSE]
+
+my.genes.blocklist <- SignatuR::GetSignature(SignatuR$Hs)
+
+if (file.exists(cache_filename)) {
+  seurat.list <- readRDS(cache_filename)
+} else {
+  # Call the functions
+  names <- names(seurat.list)
+  seurat.list <- lapply(
+        seq_along(seurat.list), 
+        function(i) {
+          print(sprintf("Dataset %i of %i", i, length(seurat.list)))
+          x <- seurat.list[[i]]
+          x <- run_seurat(x, bl=my.genes.blocklist, nfeat=nFeatures, npca=nPCAdim)
+          run_scGate_CD8T(x, models=cd8.til.models)
+        })
+  names(seurat.list) <- names
+  saveRDS(seurat.list,cache_filename)
+}
+```
+
+## Compute silhouette
+
+```{r}
+library(scIntegrationMetrics)
+run_scGate_silhouette <- function(object_in) {
+  object_out <- list()
+  pll <- list()
+  minCells <- 30
+  minCellsFreq <- 0.03
+  shuffle <- F
+  addRndPure <- F
+  set.seed(123)
+  red <- "pca"
+  red.ndim <- 10
+  for (x in names(object_in)) {
+    #print(x)
+    obj <- object_in[[x]]
+    if(addRndPure){
+      for(classN in c(3,5,10,20,30,50,90)/100){
+        rndPure <- ifelse(runif(length(Cells(obj)))<classN,"Pure","Impure")
+        rndPure <- as.data.frame(rndPure)
+        rownames(rndPure) <- Cells(obj)
+        obj <- AddMetaData(obj,rndPure,col.name = paste0("is.pure_CD8_rnd_",classN))
+      }
+    }
+    classes <- grep("is.pure_CD8",names(obj@meta.data),value=T)
+    if (shuffle){
+      for (c in classes){
+        obj@meta.data[[c]] <- sample(obj@meta.data[[c]])
+      }
+    }
+    embeds <- obj@reductions[[red]]@cell.embeddings[,1:red.ndim]
+    meta <- obj@meta.data[,]
+    cellsPerClass <- apply(meta[,classes]=="Pure",2,sum)
+#    cellsPerClass <- table(obj$scGate_multi)
+    
+    which_classes <- cellsPerClass > minCells & cellsPerClass/length(Cells(obj)) > minCellsFreq
+    classes <- classes[which_classes]
+    #print(table(obj$scGate_multi,useNA = "always"))
+    # skip NAs and irrelevant levels
+    use_cells <- Cells(obj)[which(!is.na(obj$scGate_multi) & obj$scGate_multi != "Multi")]
+    res.sil <- try(scIntegrationMetrics::compute_silhouette(embeds, meta_data = meta, label_colnames=classes))
+    object_out[[x]] <- compute_mean_singleLevel(res.sil,meta,classes,"Pure")
+    #print(object_out[[x]])
+  }
+  return(object_out)
+}
+
+seurat.list.sil <- run_scGate_silhouette(seurat.list)
+```
+
+Visualize scGate annotations & number of high-silhouette clusters
+
+```{r}
+DimPlot(seurat.list[[1]],group.by = "scGate_multi") + theme_void()
+
+highSilCluster <- lapply(seurat.list.sil,function(i)length(i[i>0.1]))
+hist(unlist(highSilCluster))
+pll <- lapply(names(seurat.list.sil), function(x){
+  
+  DimPlot(seurat.list[[x]],group.by = "scGate_multi", cols = colors.scgate) +
+    theme_void() + ggtitle(x, subtitle = paste("#hiSilCl",highSilCluster[[x]]))
+})
+pll_w <- wrap_plots(pll)
+names(pll) <- names(seurat.list.sil)
+
+ggsave(paste0(path_plots,"CD8refmap_scGate_silhouette.png"), width = 30, height = 30)
+```
+
+# 9-Downsample by scGate class
+
+```{r}
+# Tranform NAs into class
+seurat.list <- lapply(seurat.list, function(x) {
+  non.assigned <- is.na(x$scGate_multi)
+  x$scGate_multi[non.assigned] <- 'NA'
+  x
+})
+
+# Downsample by scGate annotation, to avoid over-representation of specific subtypes
+
+seurat.list <- lapply(seurat.list, function(x) {
+  Idents(x) <- x$scGate_multi
+  subset(x, downsample=max.cells.per.subtype)
+})
+sum(unlist(lapply(seurat.list, ncol)))
+
+# Put back NAs as real NA
+seurat.list <- lapply(seurat.list, function(x) {
+  non.assigned <- x$scGate_multi == 'NA'
+  x$scGate_multi[non.assigned] <- NA
+  x
+})
+
+#Store sil coefficients
+for (n in names(seurat.list)) {
+  seurat.list[[n]]@misc$sil <- seurat.list.sil[[n]] 
+}
+
+
+cache_filename <- paste0(path_cache,"Step9.seurat.list.scGate_balanced.rds")
+saveRDS(seurat.list, cache_filename)
+```
+
+# 
+
+# 10 - DATASET SELECTION FOR REFERENCE
+
+# Select only tumor datasets?
+
+```{r}
+only_tumor <- TRUE
+
+if (only_tumor) {
+  which.sets <- grep(x = names(seurat.list), pattern = "T\\d{1}", value = T)
+  seurat.list <- seurat.list[which.sets]
+}
+```
+
+Check distribution of size and silhouette
+
+```{r}
+#Read sil coefficients
+seurat.list.sil <- lapply(seurat.list, function(x) {
+  x@misc$sil
+})
+
+# Correlation between sil and dataset size
+ncells <- unlist(lapply(seurat.list, ncol))
+
+seurat.list.sil.avg <- unlist(lapply(seurat.list.sil, mean))
+seurat.list.sil.count <- unlist(lapply(seurat.list.sil, function(x){
+  
+} ))
+seurat.list.tpex <- unlist(lapply(seurat.list, function(x) {
+  sum(x$scGate_multi=="CD8_TPEX", na.rm = TRUE)
+}))
+
+plot(ncells, seurat.list.sil.avg)
+plot(ncells, seurat.list.sil.count)
+plot(seurat.list.sil.avg, seurat.list.sil.count)
+```
+
+Filter by silhouette
+
+```{r}
+# We filter by average silhouette
+min_avg_sil <- 0.1 #minimum silhuette
+min_sil_count <- 3  #min 3 subtypes
+df <- as.data.frame(cbind(ncells,
+                          seurat.list.sil.avg,
+                          seurat.list.sil.count,
+                          seurat.list.tpex))
+df <- df[df$seurat.list.sil.avg >= min_avg_sil,]
+df <- df[df$seurat.list.sil.count >= min_sil_count,]
+
+df <- arrange(df, -seurat.list.sil.count, -seurat.list.sil.avg, -ncells)
+head(df)
+
+#Select based on 2 criteria
+n_selected_datasets <- min(n_selected_datasets, length(seurat.list))
+n_sel1 <- round(2/3 * n_selected_datasets)
+n_sel2 <- n_selected_datasets - n_sel1
+
+#1. Based on most high sil classes
+selected <- rownames(df)[1:n_sel1]
+
+#2. Based on Tpex count
+df2 <- df[!rownames(df) %in% selected,]
+df2 <- arrange(df2, -seurat.list.tpex)
+
+selected <- c(selected,rownames(df2)[1:n_sel2])
+
+seurat.list.selected <- seurat.list[selected]
+
+# Save
+cache_filename <- paste0(path_cache,"Step10.seurat.list.NickB.v0.4.selected.rds")
+saveRDS(seurat.list.selected, cache_filename)
+```
+
+Plot selected datasets - check them individually
+
+```{r}
+# Plot final datsets
+pll.w <- wrap_plots(pll[selected])
+ggsave(paste0(path_plots,"CD8refmap_scGate_silhouette_topN.png"), width = 15, height = 10)
+
+# Histogram after downsampling
+nc <- lapply(seurat.list.selected, ncol)
+hist(unlist(nc), breaks = 100, main = "Size of datasets after homogenizing scgate classes")
+
+# Number of cells
+print(paste0("Number of cells at step 9 filtering: ", sum(unlist(nc))))
+```
+
+# 11 - Optional - Balanced representation of tumor types
+
+Tumor-type must represent at most 20% of the total data. Other filtering could be done to ensure consistency between tissues (same number of cells / same number of samples / take matched samples only).
+
+```{r eval=F}
+## Append tumor type metadata to silhouette filtered datasets
+df <- as.data.frame(cbind(ncells, seurat.list.sil.avg, seurat.list.sil.count))
+df <- df[df$seurat.list.sil.avg > min_subtype_Silhouette,]
+df$tumor.type <- NA
+df$names <- rownames(df)
+df$ncells <- as.numeric(df$ncells)
+df <- df[order(df$ncells, decreasing = T),]
+
+tumors <- c("BT","BCT","ET","EST","HT","LT","MT","OT","RT","SCT")
+names(tumors) <- c("Breast","BCC","Endometrial","Esophagus","HNSCC","Lung","Melanoma","Ovarian","Renal","SCC")
+
+for (i in 1:length(rownames(df))){
+  tumor.type <- names(tumors)[which(startsWith(rownames(df)[i], tumors))]
+  df$tumor.type[i] <- tumor.type
+}
+
+## Top 5 datasets without renal samples
+
+selected.datasets <- df |> top_n(n = 5, wt = seurat.list.sil.count) |>  select(names) |> unlist()
+seurat.list.top.tissue <- seurat.list[selected.datasets]
+
+selected.datasets <- df |> group_by(tumor.type) |> top_n(n = 3, wt = seurat.list.sil.count) |> ungroup() |>  select(names) |> unlist()
+# seurat.list.subset.scgate.top.tissue <- seurat.list.subset.scgate[selected.datasets]
+
+
+# Save
+cache_filename <- paste0(path_cache,"Step11.seurat.list.NickB.v0.4.tumortypes.rds")
+saveRDS(seurat.list.subset.scgate.top.tissue, cache_filename)
+```
+
+Plot selected datasets - check them individually
+
+```{r eval=F}
+# Plot final datsets
+pll.w <- wrap_plots(pll[selected.datasets])
+ggsave(paste0(path_plots,"CD8refmap_scGate_silhouette_top20.png"), width = 15, height = 10)
+
+# Histogram after downsampling
+ncells <- lapply(seurat.list, ncol)
+hist(unlist(ncells), breaks = 100, main = "Size of datasets after homogenizing scgate classes")
+
+# Number of cells
+print(paste0("Number of cells at step 9 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+```

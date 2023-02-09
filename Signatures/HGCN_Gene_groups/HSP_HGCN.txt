@@ -1,0 +1,98 @@
+HGNC ID	Approved symbol	Approved name	Status	Locus type	Previous symbols	Alias symbols	Chromosome	NCBI Gene ID	Ensembl gene ID	Vega gene ID	Group ID	Group name
+HGNC:26291	BBS10	Bardet-Biedl syndrome 10	Approved	gene with protein product	C12orf58	FLJ23560	12q21.2	79738	ENSG00000179941	OTTHUMG00000147352	587	Chaperonins
+HGNC:26648	BBS12	Bardet-Biedl syndrome 12	Approved	gene with protein product	C4orf24	FLJ35630, FLJ41559	4q27	166379	ENSG00000181004	OTTHUMG00000133070	587	Chaperonins
+HGNC:11655	TCP1	t-complex 1	Approved	gene with protein product		D6S230E, CCT1, Ccta	6q25.3	6950	ENSG00000120438	OTTHUMG00000015937	587	Chaperonins
+HGNC:1615	CCT2	chaperonin containing TCP1 subunit 2	Approved	gene with protein product		Cctb	12q15	10576	ENSG00000166226	OTTHUMG00000169383	587	Chaperonins
+HGNC:1616	CCT3	chaperonin containing TCP1 subunit 3	Approved	gene with protein product	TRIC5	Cctg	1q22	7203	ENSG00000163468	OTTHUMG00000024061	587	Chaperonins
+HGNC:1617	CCT4	chaperonin containing TCP1 subunit 4	Approved	gene with protein product		Cctd	2p15	10575	ENSG00000115484	OTTHUMG00000152166	587	Chaperonins
+HGNC:1618	CCT5	chaperonin containing TCP1 subunit 5	Approved	gene with protein product		KIAA0098	5p15.2	22948	ENSG00000150753	OTTHUMG00000131042	587	Chaperonins
+HGNC:1620	CCT6A	chaperonin containing TCP1 subunit 6A	Approved	gene with protein product	CCT6	TTCP20, TCPZ, Cctz, HTR3, TCP20	7p11.2	908	ENSG00000146731	OTTHUMG00000022842	587	Chaperonins
+HGNC:1621	CCT6B	chaperonin containing TCP1 subunit 6B	Approved	gene with protein product		Cctz2, TSA303	17q12	10693	ENSG00000132141	OTTHUMG00000179770	587	Chaperonins
+HGNC:1622	CCT7	chaperonin containing TCP1 subunit 7	Approved	gene with protein product		Ccth, Nip7-1	2p13.2	10574	ENSG00000135624	OTTHUMG00000152765	587	Chaperonins
+HGNC:1623	CCT8	chaperonin containing TCP1 subunit 8	Approved	gene with protein product	C21orf112	Cctq, PRED71	21q21.3	10694	ENSG00000156261	OTTHUMG00000044595	587	Chaperonins
+HGNC:30664	CLPB	caseinolytic mitochondrial matrix peptidase chaperone subunit B	Approved	gene with protein product		HSP78, SKD3, FLJ13152, ANKCLB	11q13.4	81570	ENSG00000162129	OTTHUMG00000167902	587	Chaperonins
+HGNC:5261	HSPD1	heat shock protein family D (Hsp60) member 1	Approved	gene with protein product	SPG13	GroEL, HSP60	2q33.1	3329	ENSG00000144381	OTTHUMG00000154463	587	Chaperonins
+HGNC:5269	HSPE1	heat shock protein family E (Hsp10) member 1	Approved	gene with protein product		CPN10, GroES, HSP10, EPF	2q33.1	3336	ENSG00000115541	OTTHUMG00000132749	587	Chaperonins
+HGNC:7108	MKKS	MKKS centrosomal shuttling protein	Approved	gene with protein product	BBS6		20p12.2	8195	ENSG00000125863	OTTHUMG00000031868	587	Chaperonins
+HGNC:5229	DNAJA1	DnaJ heat shock protein family (Hsp40) member A1	Approved	gene with protein product	HSJ2	HSPF4, hdj-2, dj-2, NEDD7	9p21.1	3301	ENSG00000086061	OTTHUMG00000019760	584	DNAJ (HSP40) heat shock proteins
+HGNC:14884	DNAJA2	DnaJ heat shock protein family (Hsp40) member A2	Approved	gene with protein product		HIRIP4, DNAJ, CPR3, DNJ3	16q11.2	10294	ENSG00000069345	OTTHUMG00000133104	584	DNAJ (HSP40) heat shock proteins
+HGNC:11808	DNAJA3	DnaJ heat shock protein family (Hsp40) member A3	Approved	gene with protein product	TID1	hTid-1	16p13.3	9093	ENSG00000103423	OTTHUMG00000129470	584	DNAJ (HSP40) heat shock proteins
+HGNC:14885	DNAJA4	DnaJ heat shock protein family (Hsp40) member A4	Approved	gene with protein product		PRO1472	15q25.1	55466	ENSG00000140403	OTTHUMG00000143733	584	DNAJ (HSP40) heat shock proteins
+HGNC:5270	DNAJB1	DnaJ heat shock protein family (Hsp40) member B1	Approved	gene with protein product	HSPF1	Hsp40, Sis1, RSPH16B	19p13.12	3337	ENSG00000132002	OTTHUMG00000183289	584	DNAJ (HSP40) heat shock proteins
+HGNC:14889	DNAJB11	DnaJ heat shock protein family (Hsp40) member B11	Approved	gene with protein product		EDJ, HEDJ, ERdj3	3q27.3	51726	ENSG00000090520	OTTHUMG00000156614	584	DNAJ (HSP40) heat shock proteins
+HGNC:14891	DNAJB12	DnaJ heat shock protein family (Hsp40) member B12	Approved	gene with protein product		DJ10, FLJ20027	10q22.1	54788	ENSG00000148719	OTTHUMG00000018436	584	DNAJ (HSP40) heat shock proteins
+HGNC:30718	DNAJB13	DnaJ heat shock protein family (Hsp40) member B13	Approved	gene with protein product		TSARG6, RSPH16A	11q13.4	374407	ENSG00000187726	OTTHUMG00000168093	584	DNAJ (HSP40) heat shock proteins
+HGNC:25881	DNAJB14	DnaJ heat shock protein family (Hsp40) member B14	Approved	gene with protein product		FLJ14281	4q23	79982	ENSG00000164031	OTTHUMG00000131049	584	DNAJ (HSP40) heat shock proteins
+HGNC:5228	DNAJB2	DnaJ heat shock protein family (Hsp40) member B2	Approved	gene with protein product	HSJ1	HSPF3, CMT2T	2q35	3300	ENSG00000135924	OTTHUMG00000133134	584	DNAJ (HSP40) heat shock proteins
+HGNC:32397	DNAJB3	DnaJ heat shock protein family (Hsp40) member B3	Approved	unknown		HCG3	2q37.1	414061	ENSG00000227802	OTTHUMG00000059034	584	DNAJ (HSP40) heat shock proteins
+HGNC:14886	DNAJB4	DnaJ heat shock protein family (Hsp40) member B4	Approved	gene with protein product		HLJ1	1p31.1	11080	ENSG00000162616	OTTHUMG00000040905	584	DNAJ (HSP40) heat shock proteins
+HGNC:14887	DNAJB5	DnaJ heat shock protein family (Hsp40) member B5	Approved	gene with protein product		Hsc40	9p13.3	25822	ENSG00000137094	OTTHUMG00000019840	584	DNAJ (HSP40) heat shock proteins
+HGNC:14888	DNAJB6	DnaJ heat shock protein family (Hsp40) member B6	Approved	gene with protein product	LGMD1D	MRJ	7q36.3	10049	ENSG00000105993	OTTHUMG00000157242	584	DNAJ (HSP40) heat shock proteins
+HGNC:24986	DNAJB7	DnaJ heat shock protein family (Hsp40) member B7	Approved	gene with protein product		HSC3	22q13.2	150353	ENSG00000172404	OTTHUMG00000151202	584	DNAJ (HSP40) heat shock proteins
+HGNC:23699	DNAJB8	DnaJ heat shock protein family (Hsp40) member B8	Approved	gene with protein product		MGC33884, CT156	3q21.3	165721	ENSG00000179407	OTTHUMG00000159690	584	DNAJ (HSP40) heat shock proteins
+HGNC:6968	DNAJB9	DnaJ heat shock protein family (Hsp40) member B9	Approved	gene with protein product	MDG1		7q31.1	4189	ENSG00000128590	OTTHUMG00000154866	584	DNAJ (HSP40) heat shock proteins
+HGNC:20090	DNAJC1	DnaJ heat shock protein family (Hsp40) member C1	Approved	gene with protein product		DNAJL1, ERdj1, MTJ1	10p12.31	64215	ENSG00000136770	OTTHUMG00000017800	584	DNAJ (HSP40) heat shock proteins
+HGNC:24637	DNAJC10	DnaJ heat shock protein family (Hsp40) member C10	Approved	gene with protein product		ERdj5, PDIA19	2q32.1	54431	ENSG00000077232	OTTHUMG00000154209	584	DNAJ (HSP40) heat shock proteins
+HGNC:25570	DNAJC11	DnaJ heat shock protein family (Hsp40) member C11	Approved	gene with protein product		FLJ10737	1p36.31	55735	ENSG00000007923	OTTHUMG00000001443	584	DNAJ (HSP40) heat shock proteins
+HGNC:28908	DNAJC12	DnaJ heat shock protein family (Hsp40) member C12	Approved	gene with protein product		JDP1	10q21.3	56521	ENSG00000108176	OTTHUMG00000018339	584	DNAJ (HSP40) heat shock proteins
+HGNC:30343	DNAJC13	DnaJ heat shock protein family (Hsp40) member C13	Approved	gene with protein product		RME8, KIAA0678	3q22.1	23317	ENSG00000138246	OTTHUMG00000159674	584	DNAJ (HSP40) heat shock proteins
+HGNC:24581	DNAJC14	DnaJ heat shock protein family (Hsp40) member C14	Approved	gene with protein product		DNAJ, DRIP78, HDJ3, LIP6, FLJ32792	12q13.2	85406	ENSG00000135392	OTTHUMG00000170427	584	DNAJ (HSP40) heat shock proteins
+HGNC:20325	DNAJC15	DnaJ heat shock protein family (Hsp40) member C15	Approved	gene with protein product	DNAJD1	MCJ	13q14.11	29103	ENSG00000120675	OTTHUMG00000016813	584	DNAJ (HSP40) heat shock proteins
+HGNC:29157	DNAJC16	DnaJ heat shock protein family (Hsp40) member C16	Approved	gene with protein product		KIAA0962	1p36.21	23341	ENSG00000116138	OTTHUMG00000002358	584	DNAJ (HSP40) heat shock proteins
+HGNC:25556	DNAJC17	DnaJ heat shock protein family (Hsp40) member C17	Approved	gene with protein product		FLJ10634	15q15.1	55192	ENSG00000104129	OTTHUMG00000130065	584	DNAJ (HSP40) heat shock proteins
+HGNC:28429	DNAJC18	DnaJ heat shock protein family (Hsp40) member C18	Approved	gene with protein product		MGC29463	5q31.2	202052	ENSG00000170464	OTTHUMG00000129225	584	DNAJ (HSP40) heat shock proteins
+HGNC:30528	DNAJC19	DnaJ heat shock protein family (Hsp40) member C19	Approved	gene with protein product		TIMM14, Tim14, Pam18	3q26.33	131118	ENSG00000205981	OTTHUMG00000158180	584	DNAJ (HSP40) heat shock proteins
+HGNC:13192	DNAJC2	DnaJ heat shock protein family (Hsp40) member C2	Approved	gene with protein product	ZRF1	MPP11, MPHOSPH11, ZUO1, zuotin	7q22.1	27000	ENSG00000105821	OTTHUMG00000157202	584	DNAJ (HSP40) heat shock proteins
+HGNC:28913	HSCB	HscB mitochondrial iron-sulfur cluster cochaperone	Approved	gene with protein product		HSC20, DNAJC20, Jac1	22q12.1	150274	ENSG00000100209	OTTHUMG00000151092	584	DNAJ (HSP40) heat shock proteins
+HGNC:27030	DNAJC21	DnaJ heat shock protein family (Hsp40) member C21	Approved	gene with protein product		GS3, DNAJA5, JJJ1	5p13.2	134218	ENSG00000168724	OTTHUMG00000074103	584	DNAJ (HSP40) heat shock proteins
+HGNC:25802	DNAJC22	DnaJ heat shock protein family (Hsp40) member C22	Approved	gene with protein product		wus, FLJ13236	12q13.12	79962	ENSG00000178401	OTTHUMG00000169487	584	DNAJ (HSP40) heat shock proteins
+HGNC:21082	SEC63	SEC63 homolog, protein translocation regulator	Approved	gene with protein product		SEC63L, PRO2507, ERdj2, DNAJC23	6q21	11231	ENSG00000025796	OTTHUMG00000015316	584	DNAJ (HSP40) heat shock proteins
+HGNC:26979	DNAJC24	DnaJ heat shock protein family (Hsp40) member C24	Approved	gene with protein product	ZCSL3, DPH4	JJJ3	11p13	120526	ENSG00000170946	OTTHUMG00000133712	584	DNAJ (HSP40) heat shock proteins
+HGNC:34187	DNAJC25	DnaJ heat shock protein family (Hsp40) member C25	Approved	gene with protein product		bA16L21.2.1	9q31.3	548645	ENSG00000059769	OTTHUMG00000020491	584	DNAJ (HSP40) heat shock proteins
+HGNC:4113	GAK	cyclin G associated kinase	Approved	gene with protein product		DNAJC26	4p16.3	2580	ENSG00000178950	OTTHUMG00000088301	584	DNAJ (HSP40) heat shock proteins
+HGNC:30290	DNAJC27	DnaJ heat shock protein family (Hsp40) member C27	Approved	gene with protein product	RBJ	RabJS	2p23.3	51277	ENSG00000115137	OTTHUMG00000125524	584	DNAJ (HSP40) heat shock proteins
+HGNC:1297	DNAJC28	DnaJ heat shock protein family (Hsp40) member C28	Approved	gene with protein product	C21orf55	C21orf78	21q22.11	54943	ENSG00000177692	OTTHUMG00000065531	584	DNAJ (HSP40) heat shock proteins
+HGNC:10519	SACS	sacsin molecular chaperone	Approved	gene with protein product		ARSACS, KIAA0730, DKFZp686B15167, DNAJC29, SPAX6, PPP1R138	13q12.12	26278	ENSG00000151835	OTTHUMG00000016562	584	DNAJ (HSP40) heat shock proteins
+HGNC:9439	DNAJC3	DnaJ heat shock protein family (Hsp40) member C3	Approved	gene with protein product	PRKRI	P58, P58IPK, HP58, ERdj6, p58(IPK)	13q32.1	5611	ENSG00000102580	OTTHUMG00000017227	584	DNAJ (HSP40) heat shock proteins
+HGNC:16410	DNAJC30	DnaJ heat shock protein family (Hsp40) member C30	Approved	gene with protein product	WBSCR18		7q11.23	84277	ENSG00000176410	OTTHUMG00000023290	584	DNAJ (HSP40) heat shock proteins
+HGNC:5271	DNAJC4	DnaJ heat shock protein family (Hsp40) member C4	Approved	gene with protein product	HSPF2	MCG18	11q13.1	3338	ENSG00000110011	OTTHUMG00000167792	584	DNAJ (HSP40) heat shock proteins
+HGNC:16235	DNAJC5	DnaJ heat shock protein family (Hsp40) member C5	Approved	gene with protein product	CLN4	FLJ00118, FLJ13070, DNAJC5A	20q13.33	80331	ENSG00000101152	OTTHUMG00000033007	584	DNAJ (HSP40) heat shock proteins
+HGNC:24138	DNAJC5B	DnaJ heat shock protein family (Hsp40) member C5 beta	Approved	gene with protein product		MGC26226, CSP-beta	8q13.1	85479	ENSG00000147570	OTTHUMG00000164470	584	DNAJ (HSP40) heat shock proteins
+HGNC:24844	DNAJC5G	DnaJ heat shock protein family (Hsp40) member C5 gamma	Approved	gene with protein product		FLJ40417, CSP-gamma	2p23.3	285126	ENSG00000163793	OTTHUMG00000097079	584	DNAJ (HSP40) heat shock proteins
+HGNC:15469	DNAJC6	DnaJ heat shock protein family (Hsp40) member C6	Approved	gene with protein product		KIAA0473, PARK19	1p31.3	9829	ENSG00000116675	OTTHUMG00000009066	584	DNAJ (HSP40) heat shock proteins
+HGNC:12392	DNAJC7	DnaJ heat shock protein family (Hsp40) member C7	Approved	gene with protein product	TTC2	TPR2	17q21.2	7266	ENSG00000168259	OTTHUMG00000180862	584	DNAJ (HSP40) heat shock proteins
+HGNC:15470	DNAJC8	DnaJ heat shock protein family (Hsp40) member C8	Approved	gene with protein product		SPF31	1p35.3	22826	ENSG00000126698	OTTHUMG00000003538	584	DNAJ (HSP40) heat shock proteins
+HGNC:19123	DNAJC9	DnaJ heat shock protein family (Hsp40) member C9	Approved	gene with protein product		JDD1, SB73	10q22.2	23234	ENSG00000213551	OTTHUMG00000018461	584	DNAJ (HSP40) heat shock proteins
+HGNC:19022	HSPA12A	heat shock protein family A (Hsp70) member 12A	Approved	gene with protein product		FLJ13874, KIAA0417	10q25.3	259217	ENSG00000165868	OTTHUMG00000019107	583	Heat shock 70kDa proteins
+HGNC:16193	HSPA12B	heat shock protein family A (Hsp70) member 12B	Approved	gene with protein product	C20orf60	dJ1009E24.2	20p13	116835	ENSG00000132622	OTTHUMG00000031755	583	Heat shock 70kDa proteins
+HGNC:11375	HSPA13	heat shock protein family A (Hsp70) member 13	Approved	gene with protein product	STCH		21q11.2	6782	ENSG00000155304	OTTHUMG00000074261	583	Heat shock 70kDa proteins
+HGNC:29526	HSPA14	heat shock protein family A (Hsp70) member 14	Approved	gene with protein product		HSP70-4, HSP70L1	10p13	51182	ENSG00000187522	OTTHUMG00000191882	583	Heat shock 70kDa proteins
+HGNC:5232	HSPA1A	heat shock protein family A (Hsp70) member 1A	Approved	gene with protein product	HSPA1	HSP70-1	6p21.33	3303	ENSG00000204389	OTTHUMG00000031201	583	Heat shock 70kDa proteins
+HGNC:5233	HSPA1B	heat shock protein family A (Hsp70) member 1B	Approved	gene with protein product		HSP70-2	6p21.33	3304	ENSG00000204388	OTTHUMG00000031202	583	Heat shock 70kDa proteins
+HGNC:5234	HSPA1L	heat shock protein family A (Hsp70) member 1 like	Approved	gene with protein product		HSP70-HOM, hum70t	6p21.33	3305	ENSG00000204390	OTTHUMG00000031208	583	Heat shock 70kDa proteins
+HGNC:5235	HSPA2	heat shock protein family A (Hsp70) member 2	Approved	gene with protein product			14q23.3	3306	ENSG00000126803	OTTHUMG00000141311	583	Heat shock 70kDa proteins
+HGNC:5237	HSPA4	heat shock protein family A (Hsp70) member 4	Approved	gene with protein product		HS24/P52, HSPH2	5q31.1	3308	ENSG00000170606	OTTHUMG00000129012	583	Heat shock 70kDa proteins
+HGNC:17041	HSPA4L	heat shock protein family A (Hsp70) member 4 like	Approved	gene with protein product		APG-1, Osp94, HSPH3	4q28.1	22824	ENSG00000164070	OTTHUMG00000133302	583	Heat shock 70kDa proteins
+HGNC:5238	HSPA5	heat shock protein family A (Hsp70) member 5	Approved	gene with protein product	GRP78	BiP	9q33.3	3309	ENSG00000044574	OTTHUMG00000020672	583	Heat shock 70kDa proteins
+HGNC:5239	HSPA6	heat shock protein family A (Hsp70) member 6	Approved	gene with protein product		HSP70B'	1q23.3	3310	ENSG00000173110	OTTHUMG00000034461	583	Heat shock 70kDa proteins
+HGNC:5240	HSPA7	heat shock protein family A (Hsp70) member 7 (pseudogene)	Approved	pseudogene		HSP70B	1q23.3	3311	ENSG00000225217	OTTHUMG00000074098	583	Heat shock 70kDa proteins
+HGNC:5241	HSPA8	heat shock protein family A (Hsp70) member 8	Approved	gene with protein product	HSPA10	HSC71, HSC70, HSP73	11q24.1	3312	ENSG00000109971	OTTHUMG00000166030	583	Heat shock 70kDa proteins
+HGNC:5244	HSPA9	heat shock protein family A (Hsp70) member 9	Approved	gene with protein product	HSPA9B	GRP75, PBP74, mot-2, mthsp75	5q31.2	3313	ENSG00000113013	OTTHUMG00000129206	583	Heat shock 70kDa proteins
+HGNC:16969	HSPH1	heat shock protein family H (Hsp110) member 1	Approved	gene with protein product		HSP105B, KIAA0201, HSP105A, NY-CO-25	13q12.3	10808	ENSG00000120694	OTTHUMG00000016685	583	Heat shock 70kDa proteins
+HGNC:16931	HYOU1	hypoxia up-regulated 1	Approved	gene with protein product		ORP150, HSP12A, Grp170	11q23.3	10525	ENSG00000149428	OTTHUMG00000166354	583	Heat shock 70kDa proteins
+HGNC:5253	HSP90AA1	heat shock protein 90 alpha family class A member 1	Approved	gene with protein product	HSPC1, HSPCA	Hsp89, Hsp90, FLJ31884, HSP90N	14q32.31	3320	ENSG00000080824	OTTHUMG00000171752	586	Heat shock 90kDa proteins
+HGNC:5254	HSP90AA3P	heat shock protein 90 alpha family class A member 3, pseudogene	Approved	pseudogene	HSPCAL1		1q23.1	3322	ENSG00000231434	OTTHUMG00000019634	586	Heat shock 90kDa proteins
+HGNC:5258	HSP90AB1	heat shock protein 90 alpha family class B member 1	Approved	gene with protein product	HSPC2, HSPCB		6p21.1	3326	ENSG00000096384	OTTHUMG00000014761	586	Heat shock 90kDa proteins
+HGNC:12028	HSP90B1	heat shock protein 90 beta family member 1	Approved	gene with protein product	TRA1	GP96, GRP94	12q23.3	7184	ENSG00000166598	OTTHUMG00000170118	586	Heat shock 90kDa proteins
+HGNC:16264	TRAP1	TNF receptor associated protein 1	Approved	gene with protein product		HSP75, HSP90L	16p13.3	10131	ENSG00000126602	OTTHUMG00000129427	586	Heat shock 90kDa proteins
+HGNC:5246	HSPB1	heat shock protein family B (small) member 1	Approved	gene with protein product		HSP27, HSP28, Hs.76067, Hsp25, CMT2F	7q11.23	3315	ENSG00000106211	OTTHUMG00000023228	585	Small heat shock proteins
+HGNC:8113	ODF1	outer dense fiber of sperm tails 1	Approved	gene with protein product		ODFPG, ODF27, RT7, HSPB10, CT133	8q22.3	4956	ENSG00000155087	OTTHUMG00000164719	585	Small heat shock proteins
+HGNC:25019	HSPB11	heat shock protein family B (small) member 11	Approved	gene with protein product	C1orf41	HSPCO34, PP25, IFT25, FAP232	1p32.3	51668	ENSG00000081870	OTTHUMG00000008408	585	Small heat shock proteins
+HGNC:5247	HSPB2	heat shock protein family B (small) member 2	Approved	gene with protein product		Hs.78846, MKBP	11q23.1	3316	ENSG00000170276	OTTHUMG00000166886	585	Small heat shock proteins
+HGNC:5248	HSPB3	heat shock protein family B (small) member 3	Approved	gene with protein product		HSPL27	5q11.2	8988	ENSG00000169271	OTTHUMG00000096995	585	Small heat shock proteins
+HGNC:2388	CRYAA	crystallin alpha A	Approved	gene with protein product	CRYA1	HSPB4	21q22.3	1409	ENSG00000160202	OTTHUMG00000086842	585	Small heat shock proteins
+HGNC:2389	CRYAB	crystallin alpha B	Approved	gene with protein product	CRYA2	HSPB5	11q23.1	1410	ENSG00000109846	OTTHUMG00000166885	585	Small heat shock proteins
+HGNC:26511	HSPB6	heat shock protein family B (small) member 6	Approved	gene with protein product		FLJ32389, Hsp20, PPP1R91	19q13.12	126393	ENSG00000004776	OTTHUMG00000048122	585	Small heat shock proteins
+HGNC:5249	HSPB7	heat shock protein family B (small) member 7	Approved	gene with protein product		cvHSP	1p36.13	27129	ENSG00000173641	OTTHUMG00000009531	585	Small heat shock proteins
+HGNC:30171	HSPB8	heat shock protein family B (small) member 8	Approved	gene with protein product		H11, E2IG1, HSP22, CMT2L	12q24.23	26353	ENSG00000152137	OTTHUMG00000168932	585	Small heat shock proteins
+HGNC:30589	HSPB9	heat shock protein family B (small) member 9	Approved	gene with protein product		CT51	17q21.2	94086	ENSG00000260325	OTTHUMG00000133500	585	Small heat shock proteins

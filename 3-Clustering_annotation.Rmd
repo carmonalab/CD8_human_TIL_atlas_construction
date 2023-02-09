@@ -1,0 +1,211 @@
+---
+title: "CD8 TIL Clustering + manual annotation"
+author: "Paul Gueguen, Massimo Anreatta, and Santiago  Carmona"
+date: "`r format(Sys.Date(),'%e de %B, %Y')`"
+output: 
+  rmdformats::downcute:
+    lightbox: true
+    thumbnails: false
+    self_contained: true
+    gallery: true
+    code_folding: show
+  pkgdown:
+    as_is: true
+---
+
+```{r, include=FALSE, fig.width=16, fig.height=12}
+library(renv)
+renv::restore()
+library(Seurat)
+library(ggplot2)
+library(scGate)
+library(STACAS)
+library(tidyverse)
+library(SignatuR)
+library(dplyr)
+options(future.globals.maxSize= 5000*1024^2)
+```
+
+# Setup parameters
+
+```{r}
+myPath <- "~/Dropbox/CSI/Datasets/Human_TIL_Atlas/CD8/"
+
+path <- "./out/NickB.CD8.integrated.stacas.semisup.rds"
+integrated <- readRDS(path)
+
+npcs = 30
+umap.min.dist = 0.3
+umap.neighbors = 30
+metric = "cosine"
+
+# Set up color palette
+mycols <- c('NaiveLike' = '#b7d2e0', 'CM' = '#da6f6f','EM'= '#72b28a','TEMRA' = '#e5bfaf', 'TPEX' = '#aca6e0' , 'TEX' ='#f5d39f', "MAIT" = '#fdbfd4')
+```
+
+Rename cell types with CD8 prefix
+```{r}
+table(integrated$functional.cluster)
+
+integrated$functional.cluster <- paste0("CD8.", integrated$functional.cluster)
+names(mycols) <- paste0("CD8.", names(mycols))
+
+```
+
+
+Find markers for unsupervised clusters
+```{r}
+Idents(integrated) <- "functional.cluster"
+DefaultAssay(integrated) <- "RNA"
+set.seed(1234)
+
+subtype.markers <- FindAllMarkers(integrated, only.pos = T,  assay = 'RNA', min.pct = 0.3, min.diff.pct = 0.1)
+
+subtype.markers.genes <- subtype.markers |> dplyr::group_by(cluster) |> dplyr::top_n(n = 10, wt = abs(avg_log2FC))
+
+for (i in levels(integrated@active.ident)) {
+    print(subset(subtype.markers.genes, cluster==i))
+} 
+
+genes.use <- unique(subtype.markers.genes$gene)
+```
+
+# Unsupervised heatmap
+
+```{r fig.height=3, fig.width=4.5}
+source("functions.R")
+library(pheatmap)
+
+h <- make.heatmap(integrated, cluster.col = 'functional.cluster',  dataset.col="Tissue",
+                  dataset.tissue = "Type", assay = "RNA", genes = genes.use, min.cells=50,
+                  cluster_genes = FALSE, cluster_samples = FALSE, method="ward.D2")
+ggsave("plots/CD8T_heatmap_pseudobulk_unclustered.png", plot=h, height=12, width=15)
+
+h <- make.heatmap(integrated,cluster.col = 'functional.cluster',  dataset.col="Tissue",
+                  dataset.tissue = "Type", assay = "RNA", genes = genes.use, min.cells=50,
+                  cluster_genes = TRUE, cluster_samples = TRUE, method="ward.D2")
+ggsave("plots/CD8T_heatmap_pseudobulk_clustered.png", plot=h, height=12, width=15)
+```
+
+
+# Building reference from ssSTACAS integrated object
+
+```{r}
+# Transform into reference + Recompute UMAP
+DefaultAssay(integrated) <- "integrated"
+ref <- ProjecTILs::make.reference(integrated, ndim = npcs,
+                                  recalculate.umap = T, atlas.name = "Human CD8 TILs",
+                                  umap.method = "umap", min_dist = umap.min.dist,
+                                  metric = metric,
+                                  n_neighbors = umap.neighbors)
+p <- DimPlot(ref, label=T, cols = mycols) + theme(aspect.ratio = 1)
+p
+ggsave("plots/CD8T_human_ref_v0.2.png", height = 4, width=6)
+
+# Adding scGate model to the object
+models <- scGate::get_scGateDB(branch = 'dev', force_update = T)
+gate.CD8.TIL <- models$human$generic$CD8TIL
+ref@misc$scGate$human <- gate.CD8.TIL
+
+# Add color scheme to the object
+ref@misc$atlas.palette <- mycols
+
+# Refactor levels
+Idents(ref) <- factor(Idents(ref), levels = names(mycols))
+ref$functional.cluster <- factor(ref$functional.cluster, levels = names(mycols))
+
+# Saving
+path <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds"
+saveRDS(ref, file = path)
+
+#ref.cd8 <- readRDS(file = "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds")
+```
+
+# Violin annotation
+
+```{r fig.height=3, fig.width=3}
+DefaultAssay(ref) <- "RNA"
+
+genes <- c('SELL','LEF1', "TCF7", "CCR7","S1PR1","LMNA","IL7R","GZMK",'CXCR4',
+           "FGFBP2",'FCGR3A','XCL1',"XCL2","CD200","CRTAM","GNG4", "TOX",'PDCD1',"HAVCR2",
+           "GZMB","PRF1","LAG3",'KLRB1','TRAV1-2')
+
+VlnPlot(ref, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
+DefaultAssay(ref) <- "integrated"
+
+ggsave("plots/CD8_ref_subset_violins.png", height=12, width=6)
+```
+
+
+# Downsample reference
+
+```{r eval=T}
+set.seed(123)
+ref.cd8.downsample <- subset(ref,  downsample = 2000)
+Idents(ref.cd8.downsample) <- "functional.cluster"
+DefaultAssay(ref.cd8.downsample) <- "integrated"
+ref.cd8.downsample <- ProjecTILs::make.reference(ref.cd8.downsample, ndim = npcs,
+                                  recalculate.umap = T, atlas.name = "Human CD8 TILs",
+                                  umap.method = "umap", min_dist = umap.min.dist,
+                                  metric = metric,
+                                  n_neighbors = umap.neighbors)
+
+ref.cd8.downsample$functional.cluster <- factor(ref.cd8.downsample$functional.cluster, levels = names(mycols))
+
+#scGate models
+models <- scGate::get_scGateDB(branch = 'dev')
+gate.CD8.TIL <- models$human$generic$CD8TIL
+ref.cd8.downsample@misc$scGate$human <- gate.CD8.TIL
+
+gate.CD8.mouse <- models$mouse$generic$CD8T
+ref.cd8.downsample@misc$scGate$mouse <- gate.CD8.mouse
+
+
+# Add color scheme to the object
+ref.cd8.downsample@misc$atlas.palette <- mycols
+
+p <- DimPlot(ref.cd8.downsample, label=T, cols = mycols) + theme(aspect.ratio = 1)
+p
+
+# Saving
+#path.ds <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2_ds.rds"
+path.ds <- "~/Dropbox/CSI/reference_atlases/CD8T_human_ref_v1.rds"
+
+saveRDS(ref.cd8.downsample, file = path.ds)
+
+
+
+```
+
+# Violin annotation
+
+```{r}
+DefaultAssay(ref.cd8.downsample) <- "RNA"
+Idents(ref.cd8.downsample) <- "functional.cluster"
+genes <- c('SELL','LEF1', "TCF7", "CCR7","S1PR1","LMNA","IL7R","GZMA","GZMK",'CXCR4',
+           "FGFBP2",'FCGR3A','XCL1',"XCL2","CD200","CRTAM","GNG4", "TOX",'PDCD1',"HAVCR2",
+           "GZMB","PRF1","LAG3",'KLRB1','TRAV1-2')
+
+VlnPlot(ref.cd8.downsample, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
+DefaultAssay(ref.cd8.downsample) <- "integrated"
+
+ggsave("plots/CD8_ref_subset_violins_ds.png", height=12, width=6)
+```
+
+Subset composition by study / sample
+(this should be done on whole set without downsampling)
+
+```{r}
+tab <- table(ref$SampleLabel, ref$functional.cluster)
+tab.norm <- tab/rowSums(tab)
+
+df <- reshape2::melt(tab.norm)
+colnames(df) <- c("Study","Subtype","Frequency")
+
+palette <- ref@misc$atlas.palette
+
+ggplot(df, aes(x = Study, y = Frequency, 
+            fill = Subtype)) + geom_bar(stat = "identity") + 
+            theme_bw() + scale_fill_manual(values = mycols) +
+            theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
