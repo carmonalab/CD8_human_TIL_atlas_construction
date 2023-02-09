@@ -1,7 +1,7 @@
 # Human CD8 TIL atlas
 This project is aimed at constructing a scRNA-seq human T cell reference. Our aimed reference should be both comprehensive/exhaustive but also interpretable and robust (ie, not having tens of overlapping classes).
 
-- To construct our model, training data were obtained from filtered data derived from Zheng et al. 2021 - Science. https://www.science.org/doi/10.1126/science.abe6474. and Nick Borcherding collection: https://github.com/ncborcherding/utility
+- To construct our model, training data were obtained from filtered data derived from Nick Borcherding collection: https://github.com/ncborcherding/utility
 
 - CD8 T cells were isolated using scGate. Cycling cells, HSP+ and ISG+ cells were removed using UCell.
 
