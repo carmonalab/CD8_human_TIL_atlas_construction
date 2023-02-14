@@ -29,7 +29,7 @@ Integration was performed using [ssSTACAS](https://carmonalab.github.io/STACAS.d
 ### Detecting Tpex:
 - https://carmonalab.github.io/ProjecTILs.demo/Detecting_Tpex_CD8_reference.html
 
-### Recovering cell types from cell states clusters (eg, cycling, IFN, tissue-residency)
+### Recovering cell types from cell states clusters (eg, cycling, IFN, tissue-residency):
 - https://carmonalab.github.io/ProjecTILs.demo/Transient_gene_programs.html
 
 For more projection examples, you can find them here: [ProjecTILs_CaseStudies](https://github.com/carmonalab/ProjecTILs_CaseStudies).
