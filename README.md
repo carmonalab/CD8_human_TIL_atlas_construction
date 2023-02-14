@@ -1,7 +1,7 @@
 # Human CD8 TIL atlas
 This repository is describing the construction of a scRNA-seq human T cell [ProjecTILs](https://github.com/carmonalab/ProjecTILs) reference. This reference aims at being comprehensive/exhaustive but also interpretable and robust. 
 
-- To construct our model, training data were obtained from filtered data derived from Nick Borcherding [collection](https://github.com/ncborcherding/utility)
+- To construct our model, training data were obtained from filtered data derived from Nick Borcherding [collection](https://github.com/ncborcherding/utility).
 
 - CD8+ T cells were isolated using [scGate](https://github.com/carmonalab/scGate).
 
