@@ -101,13 +101,11 @@ path_input <- "./input/"
 dir.create(path_input)
 
 # Download source dataset
-if (!file.exists(path_input)) {
-    dir.create(path_input)
-    dataUrl <- "https://www.dropbox.com/s/an4ptmxruxnidgk/rds.zip?dl=1"
-    download.file(dataUrl, paste0(path_input, "/tmp.zip"))
-    unzip(paste0(ddir, "/tmp.zip"), exdir = path_input)
-    file.remove(paste0(path_input, "/tmp.zip"))
-}
+dataUrl <- "https://www.dropbox.com/s/an4ptmxruxnidgk/rds.zip?dl=1"
+download.file(dataUrl, paste0(path_input, "/tmp.zip"))
+unzip(paste0(path_input, "/tmp.zip"), exdir = path_input)
+file.remove(paste0(path_input, "/tmp.zip"))
+
 
 path_output <- "./out/"
 dir.create(path_output)
@@ -140,7 +138,7 @@ Image: capture from [Nick.B github](https://github.com/ncborcherding/utility/tre
 
 ```{r}
 # Read datasets one by one for v0.4 data
-files <- list.files(path = path_input)
+files <- list.files(path = paste0(path_input, "rds"))
 seurat.list <- lapply(paste0(path_input, files), readRDS)
 names(seurat.list) <- gsub(x = files, pattern = ".rds", replacement = "")
 
