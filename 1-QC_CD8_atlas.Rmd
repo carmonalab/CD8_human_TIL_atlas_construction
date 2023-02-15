@@ -358,7 +358,7 @@ filter.signatures[["IFN"]] <- c("ISG15","IFI6","IFI44L","MX1")
 ```{r, eval=T}
 seurat.list <- lapply(seurat.list, function(x) {
   print(levels(factor(x$SampleLabel)))
-  AddModuleScore_UCell(x, features = filter.signatures, ncores = 1,
+  AddModuleScore_UCell(x, features = filter.signatures, ncores = 6,
                        assay = "RNA", name = "")
 })
 ```
