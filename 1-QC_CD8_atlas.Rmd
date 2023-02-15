@@ -101,13 +101,13 @@ path_input <- "./input/"
 dir.create(path_input)
 
 # Uncomment if internal to Carmona lab
-#path_input <- '~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/data/processedData/individualSeurat/'
+path_input <- '~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/data/processedData/individualSeurat/'
 
 # Download source dataset if needed
-dataUrl <- "https://www.dropbox.com/s/an4ptmxruxnidgk/rds.zip?dl=1"
-download.file(dataUrl, paste0(path_input, "/tmp.zip"))
-unzip(paste0(path_input, "/tmp.zip"), exdir = path_input)
-file.remove(paste0(path_input, "/tmp.zip"))
+# dataUrl <- "https://www.dropbox.com/s/an4ptmxruxnidgk/rds.zip?dl=1"
+# download.file(dataUrl, paste0(path_input, "/tmp.zip"))
+# unzip(paste0(path_input, "/tmp.zip"), exdir = path_input)
+# file.remove(paste0(path_input, "/tmp.zip"))
 
 
 path_output <- "./out/"
@@ -142,11 +142,16 @@ Image: capture from [Nick.B github](https://github.com/ncborcherding/utility/tre
 ```{r}
 # Read datasets one by one for v0.4 data
 files <- list.files(path = paste0(path_input, "rds"))
-seurat.list <- lapply(paste0(path_input, files), readRDS)
+seurat.list <- lapply(paste0(path_input, "rds/", files), readRDS)
 names(seurat.list) <- gsub(x = files, pattern = ".rds", replacement = "")
 
+# Uncomment if internal to Carmona lab
+#meta <- readxl::read_xlsx('~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/summaryInfo/sample.directory.xlsx')
+
 # Load metadata
-meta <- readxl::read_xlsx('~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/summaryInfo/sample.directory.xlsx')
+dataUrl <- 'https://www.dropbox.com/scl/fi/rho8nb64167nfl9f9dco3/sample.directory.xlsx?dl=1&rlkey=zorqa2khpw7fv6nhs93sh2xm2'
+download.file(dataUrl, paste0(path_input, "sample.directory.xlsx"))
+meta <- readxl::read_xlsx(paste0(path_input, "sample.directory.xlsx"))
 
 # Sort metadata by Samplelabel
 meta <- meta |> arrange(SampleLabel)
