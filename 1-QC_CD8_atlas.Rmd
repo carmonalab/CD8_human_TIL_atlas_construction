@@ -101,13 +101,12 @@ path_input <- "./input/"
 dir.create(path_input)
 
 # Download source dataset
-ddir <- "input/NickB.utility.v0.4"
-if (!file.exists(ddir)) {
-    dir.create(ddir)
+if (!file.exists(path_input)) {
+    dir.create(path_input)
     dataUrl <- "https://www.dropbox.com/s/an4ptmxruxnidgk/rds.zip?dl=1"
-    download.file(dataUrl, paste0(ddir, "/tmp.zip"))
-    unzip(paste0(ddir, "/tmp.zip"), exdir = ddir)
-    file.remove(paste0(ddir, "/tmp.zip"))
+    download.file(dataUrl, paste0(path_input, "/tmp.zip"))
+    unzip(paste0(ddir, "/tmp.zip"), exdir = path_input)
+    file.remove(paste0(path_input, "/tmp.zip"))
 }
 
 path_output <- "./out/"
