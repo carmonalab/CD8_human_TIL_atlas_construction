@@ -97,7 +97,19 @@ n_selected_datasets <- 20
 ## Set the paths
 
 ```{r}
-path_input <- '~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/data/processedData/individualSeurat/rds/'
+path_input <- "./input/"
+dir.create(path_input)
+
+# Download source dataset
+ddir <- "input/NickB.utility.v0.4"
+if (!file.exists(ddir)) {
+    dir.create(ddir)
+    dataUrl <- "https://www.dropbox.com/s/an4ptmxruxnidgk/rds.zip?dl=1"
+    download.file(dataUrl, paste0(ddir, "/tmp.zip"))
+    unzip(paste0(ddir, "/tmp.zip"), exdir = ddir)
+    file.remove(paste0(ddir, "/tmp.zip"))
+}
+
 path_output <- "./out/"
 dir.create(path_output)
 path_cache <- "./cache/"
@@ -346,7 +358,7 @@ filter.signatures[["IFN"]] <- c("ISG15","IFI6","IFI44L","MX1")
 ```{r, eval=T}
 seurat.list <- lapply(seurat.list, function(x) {
   print(levels(factor(x$SampleLabel)))
-  AddModuleScore_UCell(x, features = filter.signatures, ncores = 8,
+  AddModuleScore_UCell(x, features = filter.signatures, ncores = 1,
                        assay = "RNA", name = "")
 })
 ```
