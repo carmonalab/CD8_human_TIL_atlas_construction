@@ -100,7 +100,10 @@ n_selected_datasets <- 20
 path_input <- "./input/"
 dir.create(path_input)
 
-# Download source dataset
+# Uncomment if internal to Carmona lab
+#path_input <- '~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/data/processedData/individualSeurat/'
+
+# Download source dataset if needed
 dataUrl <- "https://www.dropbox.com/s/an4ptmxruxnidgk/rds.zip?dl=1"
 download.file(dataUrl, paste0(path_input, "/tmp.zip"))
 unzip(paste0(path_input, "/tmp.zip"), exdir = path_input)
