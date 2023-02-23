@@ -697,9 +697,9 @@ seurat.list.sil <- lapply(seurat.list, function(x) {
 ncells <- unlist(lapply(seurat.list, ncol))
 
 seurat.list.sil.avg <- unlist(lapply(seurat.list.sil, mean))
-seurat.list.sil.count <- unlist(lapply(seurat.list.sil, function(x){
-  
-} ))
+
+seurat.list.sil.count <- unlist(lapply(seurat.list.sil, length))
+
 seurat.list.tpex <- unlist(lapply(seurat.list, function(x) {
   sum(x$scGate_multi=="CD8_TPEX", na.rm = TRUE)
 }))
