@@ -27,10 +27,10 @@ Integration was performed using [ssSTACAS](https://carmonalab.github.io/STACAS.d
 # Tutorial to use this reference:
 
 ### Detecting Tpex
-- https://carmonalab.github.io/ProjecTILs.demo/Detecting_Tpex_CD8_reference.html
+- https://carmonalab.github.io/human_CD8_TIL_CaseStudies/Detecting_Tpex_CD8_reference.html
 
 ### Recovering cell types from cell states clusters (eg, cycling, IFN, tissue-residency)
-- https://carmonalab.github.io/ProjecTILs.demo/Transient_gene_programs.html
+- https://carmonalab.github.io/human_CD8_TIL_CaseStudies/Transient_gene_programs.html
 
 ### Uncovering activation signal in Yost et al.
 - https://carmonalab.github.io/human_CD8_TIL_CaseStudies/Activation_Yost.html
