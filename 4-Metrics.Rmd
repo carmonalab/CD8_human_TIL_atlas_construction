@@ -1,0 +1,109 @@
+---
+title: "Integrate DC datasets"
+author: "Massimo Andreatta & Santiago Carmona"
+#output: html_notebook
+---
+
+```{r}
+renv::restore()
+```
+
+Libraries
+```{r}
+#remotes::install_github('carmonalab/STACAS')
+#remotes::install_github('carmonalab/scIntegrationMetrics')
+
+library(ggplot2)
+library(Seurat)
+library(tidyr)
+library(dplyr)
+library(RColorBrewer)
+library(SeuratObject)
+library(Matrix)
+library(patchwork)
+library(remotes)
+library(STACAS)
+library(scIntegrationMetrics)
+```
+
+Read in objects for uncorrected, unsupervised and semi-sup integration
+```{r}
+merged <- readRDS("cache/CD8T_unintegrated.rds")
+integrated.ss <- readRDS("cache/CD8T_integrated_1st.rds")
+integrated.ss.2nd <- readRDS("cache/CD8T_integrated_2nd.rds")
+integrated.ss.2nd.relabel <- readRDS("cache/CD8T_integrated_2nd_relabel.rds")
+```
+
+
+```{r fig.height=2, fig.width=5}
+a <- DimPlot(merged, group.by = "scGate_multi") + NoLegend() + theme(aspect.ratio = 1)
+b <- DimPlot(integrated.ss, group.by = "scGate_multi") + NoLegend() + theme(aspect.ratio = 1)
+c <- DimPlot(integrated.ss.2nd, group.by = "scGate_multi") + theme(aspect.ratio = 1)
+a | b | c
+```
+
+Calculate integration metrics based on scGate labels (prior knowledge from standard markers)
+```{r}
+#Integration metrics on uncorrected data
+integrationMetrics <- list()
+
+metricsLabels <- NULL  #use all labels
+meta.label <- "scGate_multi"
+meta.batch <- "SampleLabel"
+
+integrationMetrics[["Uncorrected"]] <- getIntegrationMetrics(object=merged,
+                                                      meta.label = meta.label,
+                                                      meta.batch = meta.batch,
+                                                      metricsLabels = metricsLabels)
+
+integrationMetrics[["Semi-supervised"]] <- getIntegrationMetrics(object=integrated.ss,
+                                                      meta.label = meta.label,
+                                                      meta.batch = meta.batch,
+                                                      metricsLabels = metricsLabels)
+
+integrationMetrics[["Semi-supervised_2step"]] <- getIntegrationMetrics(object=integrated.ss.2nd,
+                                                      meta.label = meta.label,
+                                                      meta.batch = meta.batch,
+                                                      metricsLabels = metricsLabels)
+```
+
+Combine integration metrics
+```{r fig.height=3}
+integrationMetricsSummary <- data.frame(unlist(integrationMetrics)) %>%
+  tibble::rownames_to_column() %>%
+  dplyr::rename(value=unlist.integrationMetrics.) %>%
+  tidyr::separate(rowname, c("Method","Metric"), sep="\\.")
+
+
+integrationMetricsSummary$Method <- factor(integrationMetricsSummary$Method,
+                                           levels=c("Uncorrected","Semi-supervised","Semi-supervised_2step"))
+
+ggplot(integrationMetricsSummary, aes(x=Method, y=value, fill=Method)) + geom_bar(stat="identity") + 
+    theme_bw()  +
+    theme(legend.position="none",
+          axis.text.x=element_text(angle = 45, vjust = 1, hjust=1)) +
+    xlab("Method") + facet_wrap(~Metric, scales = "free") +
+    scale_fill_brewer(palette="Set1")
+```
+
+
+Scatterplot of two performance metrics
+```{r fig.width=4, fig.height=1.5}
+palette <- brewer.pal(n=length(unique(integrationMetricsSummary$Method)), name = "Set1")
+
+a <- integrationMetricsSummary %>% dplyr::filter(Metric %in% c("celltype_ASW","CiLISI")) %>%
+  pivot_wider(names_from = Metric, values_from = value ) %>%
+  ggplot(aes(x=CiLISI, y=`celltype_ASW`, label=Method)) +
+  geom_point(aes(color=Method), size=2) + geom_text(hjust=0.1, vjust=0) + 
+  scale_color_manual(values = palette) + theme_light()
+
+b <- integrationMetricsSummary %>% dplyr::filter(Metric %in% c("norm_cLISI","CiLISI")) %>%
+  pivot_wider(names_from = Metric, values_from = value ) %>%
+  ggplot(aes(x=CiLISI, y=`norm_cLISI`, label=Method)) +
+  geom_point(aes(color=Method), size=2) + geom_text(hjust=0.1, vjust=0) + 
+  scale_color_manual(values = palette) + theme_light()
+
+a | b
+
+ggsave("plots/CD8T_metrics_scatterplot.pdf", height=3, width=10)
+```

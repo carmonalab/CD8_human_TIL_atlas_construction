@@ -57,6 +57,30 @@ which.sets <- names(sorted[1:n])
 seurat.list <- seurat.list[which.sets]
 ```
 
+# Simple merge of the data
+
+Without any integration, what is the extent of batch effects? how are batch/label metrics?
+```{r fig.height=3}
+library(scIntegrationMetrics)
+
+merged <- Reduce(f=merge, x=seurat.list)
+
+merged <- FindVariableFeatures(merged, nfeatures = nfeatures) |> ScaleData() |>
+  RunPCA(npcs=npcs) |> RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed, n.neighbors = umap.neighbors)
+
+a <- DimPlot(merged, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", label = T) +
+  ggtitle('ssSTACAS - scGate_multi') + theme(aspect.ratio = 1)
+
+b <- DimPlot(merged, reduction = "umap",
+        group.by = "SampleLabel") + theme(aspect.ratio = 1)
+
+a | b
+
+#Save object to evaluate metrics
+saveRDS(merged, file="cache/CD8T_unintegrated.rds")
+```
+
 # Semi-supervised STACAS integration
 
 We will use scGate labels to guide STACAS integration.
@@ -121,6 +145,12 @@ DimPlot(integrated, reduction = "umap",
 DimPlot(integrated, reduction = "umap",
         group.by = "SampleLabel") + theme(aspect.ratio = 1)
 
+```
+
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated, file="cache/CD8T_integrated_1st.rds")
 ```
 
 ```{r fig.height=3.5}
@@ -224,6 +254,12 @@ DimPlot(integrated2, reduction = "umap",
   ggtitle('ssSTACAS - second iteration') + theme(aspect.ratio = 1)
 
 ```
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated2, file="cache/CD8T_integrated_2nd.rds")
+```
+
 Re-cluster?
 ```{r}
 integrated2 <- FindNeighbors(integrated2, dims = 1:npcs)
@@ -248,6 +284,11 @@ DimPlot(integrated2, reduction = "umap",
         group.by = "functional.cluster", cols=mycols, label = T) +
   ggtitle('ssSTACAS - relabeled') + theme(aspect.ratio = 1)
 
+```
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated2, file="cache/CD8T_integrated_2nd_relabel.rds")
 ```
 
 ```{r}

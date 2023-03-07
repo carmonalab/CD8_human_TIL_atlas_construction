@@ -1954,6 +1954,14 @@
         "tibble"
       ]
     },
+    "remotes": {
+      "Package": "remotes",
+      "Version": "2.4.2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "227045be9aee47e6dda9bb38ac870d67",
+      "Requirements": []
+    },
     "renv": {
       "Package": "renv",
       "Version": "0.16.0",
@@ -2124,15 +2132,15 @@
     },
     "scIntegrationMetrics": {
       "Package": "scIntegrationMetrics",
-      "Version": "0.1",
+      "Version": "0.3",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "scIntegrationMetrics",
       "RemoteUsername": "carmonalab",
       "RemoteRef": "HEAD",
-      "RemoteSha": "f69abb46cee132455d6a2a7c884e6c4681583f85",
-      "Hash": "822615c03cf88ddde431362e6167b993",
+      "RemoteSha": "a56e50435d8d567d9b5b7403b2907694bdd5dd87",
+      "Hash": "a377349366f82aacb85f8ae56d57829e",
       "Requirements": [
         "RANN",
         "Rcpp",
