@@ -80,13 +80,8 @@ a | b
 #Save object to evaluate metrics
 saveRDS(merged, file="cache/CD8T_unintegrated.rds")
 ```
-
-# Semi-supervised STACAS integration
-
-We will use scGate labels to guide STACAS integration.
-
+Gene categories to exclude from variable genes
 ```{r}
-#Gene categories to exclude from variable genes
 bl <- c(GetSignature(SignatuR$Hs$Blocklists$Pseudogenes),
         GetSignature(SignatuR$Hs$Blocklists$HSP),
         GetSignature(SignatuR$Hs$Blocklists$`Non-coding`),
@@ -101,6 +96,53 @@ bl <- unique(bl)
 bl <- list("Blocklist"=bl)
 
 ```
+
+# Unsupervised STACAS integration
+
+```{r}
+for (i in 1:length(seurat.list)) {
+  seurat.list[[i]] <- NormalizeData(seurat.list[[i]])
+  seurat.list[[i]] <- FindVariableFeatures.STACAS(seurat.list[[i]],
+                                                  nfeat=nfeatures,
+                                                  genesBlockList = bl)
+}
+hvg <- SelectIntegrationFeatures(seurat.list, nfeatures = nfeatures)
+
+stacas_anchors <- FindAnchors.STACAS(seurat.list,
+                                     genesBlockList = bl,
+                                     anchor.features = hvg,
+                                     dims = 1:npcs)
+
+tree <- SampleTree.STACAS(stacas_anchors, obj.names = names(seurat.list),
+                          hclust.method = 'ward.D2')
+
+integrated.us <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=1:npcs,
+                                   sample.tree=tree)
+
+```
+
+See low-dim reductions
+```{r}
+integrated.us <- ScaleData(integrated.us) |> RunPCA(dims = 1:npcs) |>
+      RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed, n.neighbors = umap.neighbors,
+              metric = "cosine")
+
+DimPlot(integrated.us, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", label = T) +
+  ggtitle('ssSTACAS - scGate_multi') + theme(aspect.ratio = 1)
+
+DimPlot(integrated.us, reduction = "umap",
+        group.by = "SampleLabel") + theme(aspect.ratio = 1)
+```
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated.us, file="cache/CD8T_integrated_unsup.rds")
+```
+
+# Semi-supervised STACAS integration
+
+We will use scGate labels to guide STACAS integration.
 
 ```{r}
 for (i in 1:length(seurat.list)) {
@@ -129,14 +171,14 @@ integrated <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=1:npcs,
 #integrated <- Run.STACAS(obj4int, anchor.features = 1000, cell.labels = "scGate_multi")
 ```
 
-# Reduced dimensionalities
+Reduced dimensionalities
 ```{r}
 integrated <- ScaleData(integrated) |> RunPCA(dims = 1:npcs) |>
       RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed, n.neighbors = umap.neighbors,
               metric = "cosine")
 ```
 
-# See results
+See results
 ```{r}
 DimPlot(integrated, reduction = "umap",
         cols = mycols_scGate, group.by = "scGate_multi", label = T) +

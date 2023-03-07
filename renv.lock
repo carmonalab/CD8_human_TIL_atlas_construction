@@ -2132,15 +2132,15 @@
     },
     "scIntegrationMetrics": {
       "Package": "scIntegrationMetrics",
-      "Version": "0.3",
+      "Version": "0.4",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "scIntegrationMetrics",
       "RemoteUsername": "carmonalab",
       "RemoteRef": "HEAD",
-      "RemoteSha": "a56e50435d8d567d9b5b7403b2907694bdd5dd87",
-      "Hash": "a377349366f82aacb85f8ae56d57829e",
+      "RemoteSha": "f6ca5f2dfa493bac0cc9b123f89a59255aefc15e",
+      "Hash": "b5ae45f024d108147ff84930a57836d5",
       "Requirements": [
         "RANN",
         "Rcpp",

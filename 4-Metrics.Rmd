@@ -29,17 +29,33 @@ library(scIntegrationMetrics)
 Read in objects for uncorrected, unsupervised and semi-sup integration
 ```{r}
 merged <- readRDS("cache/CD8T_unintegrated.rds")
+integrated.unsup <- readRDS("cache/CD8T_integrated_unsup.rds")
 integrated.ss <- readRDS("cache/CD8T_integrated_1st.rds")
 integrated.ss.2nd <- readRDS("cache/CD8T_integrated_2nd.rds")
-integrated.ss.2nd.relabel <- readRDS("cache/CD8T_integrated_2nd_relabel.rds")
 ```
 
 
 ```{r fig.height=2, fig.width=5}
 a <- DimPlot(merged, group.by = "scGate_multi") + NoLegend() + theme(aspect.ratio = 1)
-b <- DimPlot(integrated.ss, group.by = "scGate_multi") + NoLegend() + theme(aspect.ratio = 1)
-c <- DimPlot(integrated.ss.2nd, group.by = "scGate_multi") + theme(aspect.ratio = 1)
-a | b | c
+b <- DimPlot(integrated.unsup, group.by = "scGate_multi") + NoLegend() + theme(aspect.ratio = 1)
+c <- DimPlot(integrated.ss, group.by = "scGate_multi") + NoLegend() + theme(aspect.ratio = 1)
+d <- DimPlot(integrated.ss.2nd, group.by = "scGate_multi") + theme(aspect.ratio = 1)
+(a | b) / (c | d)
+```
+Subset on the same cells to calculate metrics (some cells were removed during integration)
+```{r}
+cells.merged <- colnames(merged)
+cells.us <- colnames(integrated.unsup)
+cells.i1 <- colnames(integrated.ss)
+cells.i2 <- colnames(integrated.ss.2nd)
+
+cells.keep <- intersect(cells.merged, cells.i2)
+
+#Subset on common cells
+merged <- subset(merged, cells=cells.keep)
+integrated.unsup <- subset(integrated.unsup, cells=cells.keep)
+integrated.ss <- subset(integrated.ss, cells=cells.keep)
+integrated.ss.2nd <- subset(integrated.ss.2nd, cells=cells.keep)
 ```
 
 Calculate integration metrics based on scGate labels (prior knowledge from standard markers)
@@ -52,6 +68,11 @@ meta.label <- "scGate_multi"
 meta.batch <- "SampleLabel"
 
 integrationMetrics[["Uncorrected"]] <- getIntegrationMetrics(object=merged,
+                                                      meta.label = meta.label,
+                                                      meta.batch = meta.batch,
+                                                      metricsLabels = metricsLabels)
+
+integrationMetrics[["Unsupervised"]] <- getIntegrationMetrics(object=integrated.unsup,
                                                       meta.label = meta.label,
                                                       meta.batch = meta.batch,
                                                       metricsLabels = metricsLabels)
@@ -76,7 +97,8 @@ integrationMetricsSummary <- data.frame(unlist(integrationMetrics)) %>%
 
 
 integrationMetricsSummary$Method <- factor(integrationMetricsSummary$Method,
-                                           levels=c("Uncorrected","Semi-supervised","Semi-supervised_2step"))
+                                           levels=c("Uncorrected","Unsupervised",
+                                                    "Semi-supervised","Semi-supervised_2step"))
 
 ggplot(integrationMetricsSummary, aes(x=Method, y=value, fill=Method)) + geom_bar(stat="identity") + 
     theme_bw()  +
