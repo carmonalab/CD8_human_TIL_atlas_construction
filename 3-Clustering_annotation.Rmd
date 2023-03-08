@@ -120,20 +120,59 @@ saveRDS(ref, file = path)
 
 #ref.cd8 <- readRDS(file = "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds")
 ```
+```{r}
+a <- DimPlot(ref, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
+  ggtitle('scGate_multi') + theme(aspect.ratio = 1)
+
+b <- DimPlot(ref, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_ssIntegration_2nd.pdf", height=4, width=9)
+
+
+```
+```{r}
+a <- DimPlot(ref, reduction = "umap",
+        cols = mycols, group.by = "functional.cluster", raster = T) +
+  ggtitle('Exp annotation') + theme(aspect.ratio = 1)
+
+b <- DimPlot(ref, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_ssIntegration_2nd_wlabels.pdf", height=4, width=9)
+
+```
 
 # Violin annotation
 
-```{r fig.height=3, fig.width=3}
+```{r fig.height=4, fig.width=2.5}
 DefaultAssay(ref) <- "RNA"
 
-genes <- c('SELL','LEF1', "TCF7", "CCR7","S1PR1","LMNA","IL7R","GZMK",'CXCR4',
-           "FGFBP2",'FCGR3A','XCL1',"XCL2","CD200","CRTAM","GNG4", "TOX",'PDCD1',"HAVCR2",
-           "GZMB","PRF1","LAG3",'KLRB1','TRAV1-2')
+genes <- c('SELL','LEF1',"S1PR1", "TCF7", "CCR7","LMNA","IL7R","GZMA","GZMK",'CCL4',
+           "FGFBP2",'FCGR3A',"GNLY",'XCL1',"XCL2","CRTAM","GNG4","TOX",'PDCD1',
+           "GZMB","PRF1","LAG3","HAVCR2",'KLRB1','TRAV1-2')
 
 VlnPlot(ref, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
+
+ggsave("plots/CD8_ref_subset_violins.pdf", height=12, width=6)
+
+#Horizontal version
+
+v <- VlnPlot(ref, features = genes, stack = TRUE, flip = FALSE, fill.by = "ident", cols = mycols)
+
+ggsave("plots/CD8_ref_subset_violins_horizontal.pdf", plot=v, height=4, width=12)
+
 DefaultAssay(ref) <- "integrated"
 
-ggsave("plots/CD8_ref_subset_violins.png", height=12, width=6)
 ```
 
 
@@ -177,6 +216,39 @@ saveRDS(ref.cd8.downsample, file = path.ds)
 
 ```
 
+```{r}
+a <- DimPlot(ref.cd8.downsample, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
+  ggtitle('scGate_multi') + theme(aspect.ratio = 1)
+
+b <- DimPlot(ref.cd8.downsample, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_ssIntegration_downsample.pdf", height=4, width=9)
+
+
+```
+
+```{r}
+a <- DimPlot(ref.cd8.downsample, reduction = "umap",
+        cols = mycols, group.by = "functional.cluster", raster = T) +
+  ggtitle('Exp annotation') + theme(aspect.ratio = 1)
+
+b <- DimPlot(ref.cd8.downsample, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_ssIntegration_downsample_wlabels.pdf", height=4, width=9)
+
+```
+
 # Violin annotation
 
 ```{r}
@@ -189,7 +261,7 @@ genes <- c('SELL','LEF1', "TCF7", "CCR7","S1PR1","LMNA","IL7R","GZMA","GZMK",'CX
 VlnPlot(ref.cd8.downsample, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
 DefaultAssay(ref.cd8.downsample) <- "integrated"
 
-ggsave("plots/CD8_ref_subset_violins_ds.png", height=12, width=6)
+ggsave("plots/CD8_ref_subset_violins_ds.pdf", height=12, width=6)
 ```
 
 Subset composition by study / sample
@@ -208,4 +280,6 @@ ggplot(df, aes(x = Study, y = Frequency,
             fill = Subtype)) + geom_bar(stat = "identity") + 
             theme_bw() + scale_fill_manual(values = mycols) +
             theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+ggsave("plots/CD8T_subset_composition.pdf", width=7, height=4)
 ```
