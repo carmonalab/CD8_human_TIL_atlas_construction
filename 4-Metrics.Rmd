@@ -32,6 +32,8 @@ merged <- readRDS("cache/CD8T_unintegrated.rds")
 integrated.unsup <- readRDS("cache/CD8T_integrated_unsup.rds")
 integrated.ss <- readRDS("cache/CD8T_integrated_1st.rds")
 integrated.ss.2nd <- readRDS("cache/CD8T_integrated_2nd.rds")
+
+annotated <- readRDS("~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds")
 ```
 
 
@@ -129,3 +131,32 @@ a | b
 
 ggsave("plots/CD8T_metrics_scatterplot.pdf", height=3, width=10)
 ```
+
+Use final annotations
+
+```{r}
+labels <- annotated$functional.cluster
+
+# Set up color palette
+mycols <- c('CD8.NaiveLike' = '#b7d2e0', 'CD8.CM' = '#da6f6f',
+            'CD8.EM'= '#72b28a','CD8.TEMRA' = '#e5bfaf', 
+            'CD8.TPEX' = '#aca6e0' , 'CD8.TEX' ='#f5d39f', "CD8.MAIT" = '#fdbfd4')
+
+merged <- subset(merged, cells=Cells(annotated))
+merged@meta.data[names(labels),"expert.labels"] <- labels
+
+a <- DimPlot(merged, reduction = "umap",
+        cols = mycols, group.by = "expert.labels", raster = T) +
+  ggtitle('Expert annot') + theme(aspect.ratio = 1)
+
+b <- DimPlot(merged, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_preintegration_byExpLabels.pdf", height=4, width=9)
+
+```
+
