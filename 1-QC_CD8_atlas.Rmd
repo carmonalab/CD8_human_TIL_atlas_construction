@@ -1,6 +1,6 @@
 ---
-title: "QC CD8 TIL atlas"
-author: "Paul Gueguen <paul.gueguen@unil.ch>"
+title: "Selection and QC of CD8 T cell datasets"
+author: "Paul Gueguen, Massimo Andreatta"
 date: "`r format(Sys.Date(),'%e de %B, %Y')`"
 output: 
   rmdformats::downcute:
@@ -38,29 +38,27 @@ A pipeline to select high-quality cells and samples for reference map constructi
 
 This notebook conducts the following processing steps:
 
--   1-Load datasets as Seurat objects from [N.Borcherding TIL reference](https://github.com/ncborcherding/utility).
+-   1-Load datasets as Seurat objects from N.Borcherding' dataset collection [Utility](https://github.com/ncborcherding/utility) (https://zenodo.org/record/6325603).
 
 -   2-Homogenize gene names with `standardizeGeneSymbols` function.
 
--   3-Remove small sample to speed up the analysis
+-   3-Remove small samples
 
--   4-Remove doublets as annotated by scDblFinder
+-   4-Filter pure CD8+ T cells using `scGate` (and remove innate-like T cells).
 
--   5-Filter pure CD8+ T cells using `scGate` (and remove innate-like T cells).
+-   5-Remove cells with strong subtype-confounding signals of biological processes: cell cycle, response to interferons, and to heat-shock using `UCell` scores.
 
--   6-Remove cells with strong subtype-confounding signals of biological processes: cell cycle, response to interferons, and to heat-shock using `UCell` scores.
+-   6-Keep only sufficiently large samples (\>min.cells.perSample).
 
--   7-Keep only sufficiently large samples (\>min.cells.perSample).
+-   7-Downsample very large samples (\>max.cells.perSample) to limit the contribution of individual big samples.
 
--   8-Downsample very large samples (\>max.cells.perSample) to limit the contribution of individual big samples.
+-   8-Select samples with strong and broad biological signals according to prior knowledge. This is computed as silhouette coefficients for previously known CD8+ TIL subtypes, predicted by `scGate`.
 
--   9-Select samples with strong and broad biological signals according to prior knowledge. This is computed as silhouette coefficients for previously known CD8+ TIL subtypes, predicted by `scGate`.
+-   9-Optionally we select the tissue for downstream analyses
 
--   10-Optionally we select the tissue for downstream analyses
+-   10-Balance tumor-types contribution
 
--   11-Homogenize representation of tumor-types
-
--   12-Final summary statistics.
+-   11-Final summary statistics.
 
     ![](images/paste-5FECB981.png)
 
@@ -109,6 +107,7 @@ path_input <- '~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/data/processedD
 # unzip(paste0(path_input, "/tmp.zip"), exdir = path_input)
 # file.remove(paste0(path_input, "/tmp.zip"))
 
+#or from original source https://zenodo.org/record/6325603
 
 path_output <- "./out/"
 dir.create(path_output)
@@ -133,25 +132,21 @@ colors.scgate <- c("CD8_EM" = "seagreen3",
 
 # 1-Loading datasets
 
-Here we are using v 0.4 of the Nick reference database as a list of Seurat objects.
-
-![](images/paste-F0CC0659.png)
-
-Image: capture from [Nick.B github](https://github.com/ncborcherding/utility/tree/dev) showing the naming nomenclature for each sample.
+Here we are using v 0.4 of the N.Borcherding's TIL datasets collection [Utility]](https://github.com/ncborcherding/utility) as a list of Seurat objects.
 
 ```{r}
 # Read datasets one by one for v0.4 data
-files <- list.files(path = paste0(path_input, "rds"))
+files <- list.files(path = paste0(path_input,"rds"), pattern="\\.*rds$")
 seurat.list <- lapply(paste0(path_input, "rds/", files), readRDS)
 names(seurat.list) <- gsub(x = files, pattern = ".rds", replacement = "")
 
 # Uncomment if internal to Carmona lab
-#meta <- readxl::read_xlsx('~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/summaryInfo/sample.directory.xlsx')
+meta <- readxl::read_xlsx('~/Dropbox/CSI/Datasets/ncborcherding/v0.4/utility/summaryInfo/sample.directory.xlsx')
 
 # Load metadata
-dataUrl <- 'https://www.dropbox.com/scl/fi/rho8nb64167nfl9f9dco3/sample.directory.xlsx?dl=1&rlkey=zorqa2khpw7fv6nhs93sh2xm2'
-download.file(dataUrl, paste0(path_input, "sample.directory.xlsx"))
-meta <- readxl::read_xlsx(paste0(path_input, "sample.directory.xlsx"))
+#dataUrl <- 'https://www.dropbox.com/scl/fi/rho8nb64167nfl9f9dco3/sample.directory.xlsx?dl=1&rlkey=zorqa2khpw7fv6nhs93sh2xm2'
+#download.file(dataUrl, paste0(path_input, "sample.directory.xlsx"))
+#meta <- readxl::read_xlsx(paste0(path_input, "sample.directory.xlsx"))
 
 # Sort metadata by Samplelabel
 meta <- meta |> arrange(SampleLabel)
@@ -232,6 +227,7 @@ sum(ncells)
 
 ```{r}
 library(data.table)
+library(R.utils)
 EnsemblGeneFile = "aux/EnsemblGenes105_Hsa_GRCh38.p13.txt.gz"
 
 # Homogenize features
@@ -244,7 +240,7 @@ for(i in names(seurat.list)){
 # 3-Remove small samples
 
 ```{r}
-cache_filename <- paste0(path_cache,"Step3.seurat.list.NickB.v0.4.rds")
+cache_filename <- paste0(path_cache,"Seurat.list.Utility.v0.4_step3.rds")
 
 if (file.exists(cache_filename)) {
   seurat.list <- readRDS(cache_filename)
@@ -259,29 +255,14 @@ if (file.exists(cache_filename)) {
 print(paste0("Number of cells at step 3 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
 ```
 
-# 4-Remove doublets
-
-Optional. We do not really know how doublets were calculated.
-
-```{r eval=F}
-seurat.list <- sapply(names(seurat.list),
-       FUN = function(x) {
-          #print(x)
-          seurat.list[[x]] <- subset(seurat.list[[x]], subset=db.class=="singlet")
-       }, USE.NAMES = T)
-
-# Number of cells
-print(paste0("Number of cells at step 4 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
-```
-
-# 5-Subset on CD8 T cells
+# 4-Subset on CD8 T cells
 
 ## Running CD8+ T cell scGate model
 
 Several datasets contain other cells than T cells. Filter on CD8+ T cells only
 
 ```{r, eval=T}
-cache_filename <- paste0(path_cache,"Step5.seurat.list.scGate_labels.rds")
+cache_filename <- paste0(path_cache,"Seurat.list.Utility.v0.4_step4.rds")
 
 if (file.exists(cache_filename)) {
   seurat.list <- readRDS(cache_filename)
@@ -316,7 +297,7 @@ DimPlot(x)
 ## Filter CD8+ cells
 
 ```{r, eval=T}
-cache_filename <- paste0(path_cache,"Step6.seurat.list.NickB.v0.4.CD8T.rds")
+cache_filename <- paste0(path_cache,"Seurat.list.Utility.v0.4_step4bis.rds")
 
 print(paste0("Number of cells pre CD8 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
 
@@ -342,11 +323,11 @@ for (i in 1:length(seurat.list)){
 seurat.list <- seurat.list[seurat.keep]
 
 # Number of cells
-print(paste0("Number of cells at step 6 filtering: ", sum(ncells)))
+print(paste0("Number of cells at step 4bis filtering: ", sum(ncells)))
 saveRDS(seurat.list, cache_filename)
 ```
 
-# 6-Remove cycling / IFN high cells
+# 5-Remove cycling / IFN high cells
 
 ```{r warning=F, message=F, eval=T}
 library(SignatuR)
@@ -427,7 +408,7 @@ seurat.list <- seurat.list[seurat.keep]
 print(paste0("Number of cells at step 6 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
 ```
 
-# 7-Remove small samples (after filtering)
+# 6-Remove small samples (after filtering)
 
 ```{r}
 # Histogram before filtering
@@ -444,7 +425,7 @@ ncells <- lapply(seurat.list, ncol)
 hist(unlist(ncells), breaks = 100, main = "Size of datasets after filtering")
 
 # Number of cells
-print(paste0("Number of cells at step 7 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+print(paste0("Number of cells at step 6 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
 ```
 
 # Do QC again on T cells only
@@ -501,10 +482,10 @@ ncells <- unlist(lapply(seurat.list, ncol))
 sum(ncells)
 
 # Save
-saveRDS(seurat.list, paste0(path_cache, "Step7.seurat.list.NickB.rds"))
+saveRDS(seurat.list, paste0(path_cache, "Seurat.list.Utility.v0.4_step6.rds"))
 ```
 
-# 8-Calculate cell type silhouette to prioritize heterogeneous samples (i.e. containing multiple cell types)
+# 7-Select samples with strong and broad biological signals according to prior knowledge. This is computed as silhouette coefficients for previously known CD8+ TIL subtypes, predicted by `scGate`.
 
 ## Compute scGate annotations
 
@@ -538,7 +519,7 @@ run_scGate_CD8T <- function(x, models) {
 
 ```{r}
 # Loading the object or else running scGate and Seurat pipeline
-cache_filename <- paste0(path_cache,"Step8.seurat.list.NickB.v0.4.scGate.classes.rds")
+cache_filename <- paste0(path_cache,"Seurat.list.Utility.v0.4_step7.rds")
 
 scGate_models <- scGate::get_scGateDB(branch = "dev", force_update = T)
 #scGate_models <- scGate::get_scGateDB(branch = "dev")
@@ -635,7 +616,7 @@ names(pll) <- names(seurat.list.sil)
 ggsave(paste0(path_plots,"CD8refmap_scGate_silhouette.png"), width = 30, height = 30)
 ```
 
-# 9-Downsample by scGate class
+# 8-Downsample cells by scGate class
 
 ```{r}
 # Tranform NAs into class
@@ -666,13 +647,13 @@ for (n in names(seurat.list)) {
 }
 
 
-cache_filename <- paste0(path_cache,"Step9.seurat.list.scGate_balanced.rds")
+cache_filename <- paste0(path_cache,"Seurat.list.Utility.v0.4_step8_scGate_balanced.rds")
 saveRDS(seurat.list, cache_filename)
 ```
 
 # 
 
-# 10 - DATASET SELECTION FOR REFERENCE
+# 9 -  Select the tissue for downstream analyses
 
 # Select only tumor datasets?
 
@@ -742,7 +723,7 @@ selected <- c(selected,rownames(df2)[1:n_sel2])
 seurat.list.selected <- seurat.list[selected]
 
 # Save
-cache_filename <- paste0(path_cache,"Step10.seurat.list.NickB.v0.4.selected.rds")
+cache_filename <- paste0(path_cache,"Seurat.list.Utility.v0.4_step9.rds")
 saveRDS(seurat.list.selected, cache_filename)
 ```
 
@@ -761,7 +742,7 @@ hist(unlist(nc), breaks = 100, main = "Size of datasets after homogenizing scgat
 print(paste0("Number of cells at step 9 filtering: ", sum(unlist(nc))))
 ```
 
-# 11 - Optional - Balanced representation of tumor types
+# 10 - Optional - Balanced representation of tumor types
 
 Tumor-type must represent at most 20% of the total data. Other filtering could be done to ensure consistency between tissues (same number of cells / same number of samples / take matched samples only).
 
@@ -792,9 +773,11 @@ selected.datasets <- df |> group_by(tumor.type) |> top_n(n = 3, wt = seurat.list
 
 
 # Save
-cache_filename <- paste0(path_cache,"Step11.seurat.list.NickB.v0.4.tumortypes.rds")
+cache_filename <- paste0(path_cache,"Seurat.list.Utility.v0.4_step10.rds")
 saveRDS(seurat.list.subset.scgate.top.tissue, cache_filename)
 ```
+
+# 11 - Final summary statistics.
 
 Plot selected datasets - check them individually
 
@@ -808,5 +791,5 @@ ncells <- lapply(seurat.list, ncol)
 hist(unlist(ncells), breaks = 100, main = "Size of datasets after homogenizing scgate classes")
 
 # Number of cells
-print(paste0("Number of cells at step 9 filtering: ", sum(unlist(lapply(seurat.list, ncol)))))
+print(paste0("Number of cells at final step: ", sum(unlist(lapply(seurat.list, ncol)))))
 ```
