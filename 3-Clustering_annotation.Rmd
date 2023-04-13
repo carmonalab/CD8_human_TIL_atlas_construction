@@ -57,37 +57,39 @@ integrated$functional.cluster <- factor(integrated$functional.cluster, levels=na
 
 
 Find markers for unsupervised clusters
+
 ```{r}
 Idents(integrated) <- "functional.cluster"
 DefaultAssay(integrated) <- "RNA"
-set.seed(1234)
 
-subtype.markers <- FindAllMarkers(integrated, only.pos = T,  assay = 'RNA', min.pct = 0.3, min.diff.pct = 0.1)
+marker.list <- FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
+                                 min.cells.group=30, min.pct=0.1,
+                                 max.cells.per.ident = 1000,
+                                 features = NULL, # integrated@assays$integrated@var.features,
+                                 min.diff.pct=-Inf, min.freq = 0.8)
 
-subtype.markers.genes <- subtype.markers |> dplyr::group_by(cluster) |> dplyr::top_n(n = 15, wt = abs(avg_log2FC))
+genes <- lapply(marker.list, function(x) {
+  names(x) |> head(10)
+})
 
-for (i in levels(integrated@active.ident)) {
-    print(subset(subtype.markers.genes, cluster==i))
-} 
-
-genes.use <- unique(subtype.markers.genes$gene)
+genes.use <- unique(unlist(genes))
 ```
 
 # Unsupervised heatmap
 
-```{r fig.height=3, fig.width=4.5}
+```{r fig.height=6, fig.width=7}
 source("functions.R")
 library(pheatmap)
 
 integrated@misc$atlas.palette <- mycols
 
-h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("Tissue"),
-                  assay = "RNA", genes = genes.use, min.cells=50,
+h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+                  assay = "RNA", genes = genes.use, min.cells=30,
                   ref=integrated, cluster_genes = FALSE, cluster_samples = FALSE)
 ggsave("plots/CD8T_heatmap_pseudobulk_unclustered.pdf", plot=h, height=7.5, width=5.5)
 
-h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("Tissue"),
-                  assay = "RNA", genes = genes.use, min.cells=50,
+h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+                  assay = "RNA", genes = genes.use, min.cells=30,
                   ref=integrated, cluster_genes = TRUE, cluster_samples = TRUE, method="ward.D2")
 ggsave("plots/CD8T_heatmap_pseudobulk_clustered.pdf", plot=h, height=8.5, width=7.5)
 ```
@@ -141,6 +143,7 @@ ggsave("plots/umap_ssIntegration_2nd.pdf", height=4, width=9)
 
 
 ```
+
 ```{r}
 a <- DimPlot(ref, reduction = "umap",
         cols = mycols, group.by = "functional.cluster", raster = T) +
