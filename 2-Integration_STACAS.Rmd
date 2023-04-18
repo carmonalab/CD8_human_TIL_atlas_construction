@@ -1,6 +1,6 @@
 ---
 title: "CD8 TIL integration with STACAS"
-author: "Paul Gueguen, Massimo Anreatta, and Santiago  Carmona"
+author: "Paul Gueguen, Massimo Andreatta, and Santiago  Carmona"
 date: "`r format(Sys.Date(),'%e de %B, %Y')`"
 output: 
   rmdformats::downcute:
@@ -47,7 +47,7 @@ mycols_scGate <- c('CD8_N' = '#b7d2e0', 'CD8_EM'= '#72b28a','CD8_TEMRA' = '#e5bf
 # Load data
 
 ```{r}
-seurat.list <- readRDS('cache/Step10.seurat.list.NickB.v0.4.selected.rds')
+seurat.list <- readRDS('cache/Seurat.list.Utility.v0.4_step9.rds')
 
 # Select top N biggest datasets
 n <- 20
@@ -381,6 +381,6 @@ DefaultAssay(integrated2) <- "integrated"
 Saving
 ```{r, eval=T}
 # Saving / loading
-path <- paste0(path_output, "NickB.CD8.integrated.stacas.semisup.rds")
+path <- paste0(path_output, "Utility.v0.4.CD8.integrated.stacas.semisup.rds")
 saveRDS(integrated2, path)
 ```

@@ -1,6 +1,6 @@
 ---
 title: "CD8 TIL Clustering + manual annotation"
-author: "Paul Gueguen, Massimo Anreatta, and Santiago  Carmona"
+author: "Paul Gueguen, Massimo Andreatta, and Santiago  Carmona"
 date: "`r format(Sys.Date(),'%e de %B, %Y')`"
 output: 
   rmdformats::downcute:
@@ -24,6 +24,7 @@ library(tidyverse)
 library(SignatuR)
 library(dplyr)
 options(future.globals.maxSize= 5000*1024^2)
+library(ProjecTILs)
 ```
 
 # Setup parameters
@@ -31,7 +32,7 @@ options(future.globals.maxSize= 5000*1024^2)
 ```{r}
 myPath <- "~/Dropbox/CSI/Datasets/Human_TIL_Atlas/CD8/"
 
-path <- "./out/NickB.CD8.integrated.stacas.semisup.rds"
+path <- "./out/Utility.v0.4.CD8.integrated.stacas.semisup.rds"
 integrated <- readRDS(path)
 
 npcs = 30
@@ -56,42 +57,158 @@ integrated$functional.cluster <- factor(integrated$functional.cluster, levels=na
 ```
 
 
+
+
 Find markers for unsupervised clusters
 
 ```{r}
 Idents(integrated) <- "functional.cluster"
 DefaultAssay(integrated) <- "RNA"
 
-marker.list <- FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
-                                 min.cells.group=30, min.pct=0.1,
-                                 max.cells.per.ident = 1000,
-                                 features = NULL, # integrated@assays$integrated@var.features,
-                                 min.diff.pct=-Inf, min.freq = 0.8)
+sort(table(integrated$functional.cluster))
+mean(table(integrated$functional.cluster,integrated$SampleLabel)>100)
+
+set.seed(1234)
+
+#marker.list <- ProjecTILs::FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
+#                                 min.cells.group=30, min.pct=0.3,
+#                                 max.cells.per.ident = 2000, logfc.threshold = 0.2,
+#                                 features = NULL, test.use = "wilcox",
+#                                 min.diff.pct=0.1, min.freq = 3/4, verbose = F, random.seed = 1, return.thresh=0.05)
+
+marker.list <- ProjecTILs::FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
+                                 min.cells.group=30, min.pct=0.2,
+                                 max.cells.per.ident = 1000, 
+                                 features = NULL, test.use = "wilcox",
+                                 min.diff.pct=0.1, min.freq = 0.8, verbose = F, logfc.threshold = 0.2) #relax criteria except min.freq by group
+
 
 genes <- lapply(marker.list, function(x) {
   names(x) |> head(10)
 })
 
-genes.use <- unique(unlist(genes))
+marker.list
+
+genes.use.bygroup <- unique(unlist(genes))
+genes.use.bygroup
 ```
+
+
+
+
+# Alternative approach to find marker genes, using a cluster tree and calculating DEG hierarchically
+
+```{r}
+library(ape)
+Idents(integrated) <- "functional.cluster"
+DefaultAssay(integrated) <- "RNA"
+
+integrated <- BuildClusterTree(integrated, dims=1:npcs, assay="RNA") #features=integrated@assays$integrated@var.features
+integrated.clusterTree <- Tool(object = integrated, slot = 'BuildClusterTree')
+PlotClusterTree(integrated)
+```
+
+```{r}
+node.marker <- FindAllMarkers(integrated, node=8, min.diff.pct = 0.3, min.cells.group=30, max.cells.per.ident = 1000, min.pct=0.1, logfc.threshold = 0.5)
+node.marker$pos <- node.marker$avg_log2FC>0
+node.marker.list <- split(node.marker, list(node.marker$pos,node.marker$cluster))
+node.marker.list
+
+node.genes <- lapply(node.marker.list, function(x) {
+  x$gene |> head(10)
+})
+
+node.genes
+node.genes.use <- unique(unlist(node.genes))
+node.genes.use
+```
+
+
+# Alternative approach to find marker genes, using a cluster tree and calculating DEG hierarchically, calculated in each dataset/batch separately and ranking by occurrence
+
+```{r}
+
+FindAllMarkers.bygroup.byNode <- function (object, split.by = NULL, only.pos = FALSE, min.cells.group = 10, node=node, ...)  
+{
+    if (is.null(split.by)) {
+        stop("Please provide a grouping variable with 'split.by' parameter")
+    }
+    obj.list <- SplitObject(object, split.by = split.by)
+    
+    meta <- object[[]]
+    deg <- lapply(obj.list, function(x) {
+        FindAllMarkers(x, only.pos = only.pos, min.cells.group = min.cells.group, node=node,
+            ...)
+        
+    })
+    deg
+    ids <- unique(unlist(lapply(deg,function(x) x$cluster)))
+    
+    genes <- lapply(ids, function(i) {
+        this <- lapply(deg, function(x) {
+              x$gene[x$cluster==i]
+          })
+  
+        counts <- table(unlist(this))
+        sort(counts, decreasing = T)
+    })
+    
+    names(genes) <- ids
+    genes
+    
+
+}
+
+
+```
+
+
+```{r}
+node.markers <- FindAllMarkers.bygroup.byNode(integrated, split.by = "SampleLabel", node=8, min.diff.pct = 0.1, min.cells.group=30, max.cells.per.ident = 1000, min.pct=0.3, logfc.threshold = 0.25)
+node.markers
+
+node.genes <- lapply(node.markers, function(x) {
+  names(x) |> head(5)
+})
+
+node.genes
+node.genes.use <- unique(unlist(node.genes))
+node.genes.use
+
+```
+
+
+
+
+```{r}
+genes.use <- unique(c(node.genes.use,genes.use.bygroup))
+genes.use
+```
+
 
 # Unsupervised heatmap
 
 ```{r fig.height=6, fig.width=7}
-source("functions.R")
 library(pheatmap)
 
 integrated@misc$atlas.palette <- mycols
 
-h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+h <- ProjecTILs::celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
                   assay = "RNA", genes = genes.use, min.cells=30,
-                  ref=integrated, cluster_genes = FALSE, cluster_samples = FALSE)
+                  ref=integrated, cluster_genes = T, cluster_samples = FALSE)
 ggsave("plots/CD8T_heatmap_pseudobulk_unclustered.pdf", plot=h, height=7.5, width=5.5)
 
-h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+h <- ProjecTILs::celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+                  assay = "RNA", genes = genes.use, min.cells=30,
+                  ref=integrated, cluster_genes = TRUE, cluster_samples = TRUE, method="average")
+ggsave("plots/CD8T_heatmap_pseudobulk_clustered.pdf", plot=h, height=8.5, width=7.5)
+
+
+h <- ProjecTILs::celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
                   assay = "RNA", genes = genes.use, min.cells=30,
                   ref=integrated, cluster_genes = TRUE, cluster_samples = TRUE, method="ward.D2")
-ggsave("plots/CD8T_heatmap_pseudobulk_clustered.pdf", plot=h, height=8.5, width=7.5)
+ggsave("plots/CD8T_heatmap_pseudobulk_clustered.w2.pdf", plot=h, height=8.5, width=7.5)
+
 ```
 
 
@@ -121,12 +238,17 @@ ref@misc$atlas.palette <- mycols
 Idents(ref) <- factor(Idents(ref), levels = names(mycols))
 ref$functional.cluster <- factor(ref$functional.cluster, levels = names(mycols))
 
+```
+
+```{r, eval=F}
 # Saving
 path <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds"
 saveRDS(ref, file = path)
 
 #ref.cd8 <- readRDS(file = "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds")
 ```
+
+
 ```{r}
 a <- DimPlot(ref, reduction = "umap",
         cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
@@ -214,6 +336,10 @@ ref.cd8.downsample@misc$atlas.palette <- mycols
 p <- DimPlot(ref.cd8.downsample, label=T, cols = mycols) + theme(aspect.ratio = 1)
 p
 
+```
+
+```{r, eval=F}
+
 # Saving
 #path.ds <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2_ds.rds"
 path.ds <- "~/Dropbox/CSI/reference_atlases/CD8T_human_ref_v1.rds"
@@ -257,14 +383,15 @@ ggsave("plots/umap_ssIntegration_downsample_wlabels.pdf", height=4, width=9)
 
 ```
 
+ 
 # Violin annotation
 
 ```{r}
 DefaultAssay(ref.cd8.downsample) <- "RNA"
 Idents(ref.cd8.downsample) <- "functional.cluster"
-genes <- c('SELL','LEF1', "TCF7", "CCR7","S1PR1","LMNA","IL7R","GZMA","GZMK",'CXCR4',
-           "FGFBP2",'FCGR3A','XCL1',"XCL2","CD200","CRTAM","GNG4", "TOX",'PDCD1',"HAVCR2",
-           "GZMB","PRF1","LAG3",'KLRB1','TRAV1-2')
+genes <- c('SELL','LEF1',"S1PR1","IL7R", "TCF7", "CCR7","LMNA","ANXA1","HOPX","GZMA","GZMK","CCL4",
+           "FGFBP2",'FCGR3A',"GNLY","KLRG1",'XCL1',"XCL2","CXCL13","CRTAM","TOX",'PDCD1',"HAVCR2","LAG3","CTLA4","ITGAE","CXCR6",
+           "GZMB","PRF1",'KLRB1','TRAV1-2')
 
 VlnPlot(ref.cd8.downsample, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
 DefaultAssay(ref.cd8.downsample) <- "integrated"
