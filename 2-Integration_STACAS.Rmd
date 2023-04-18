@@ -57,12 +57,35 @@ which.sets <- names(sorted[1:n])
 seurat.list <- seurat.list[which.sets]
 ```
 
-# Semi-supervised STACAS integration
+# Simple merge of the data
 
-We will use scGate labels to guide STACAS integration.
+Without any integration, what is the extent of batch effects? how are batch/label metrics?
+```{r fig.height=3}
+library(scIntegrationMetrics)
 
+merged <- Reduce(f=merge, x=seurat.list)
+
+merged <- FindVariableFeatures(merged, nfeatures = nfeatures) |> ScaleData() |>
+  RunPCA(npcs=npcs) |> RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed, n.neighbors = umap.neighbors)
+
+a <- DimPlot(merged, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
+  ggtitle('scGate_multi') + theme(aspect.ratio = 1)
+
+b <- DimPlot(merged, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_preintegration.pdf", height=4, width=9)
+
+#Save object to evaluate metrics
+saveRDS(merged, file="cache/CD8T_unintegrated.rds")
+```
+Gene categories to exclude from variable genes
 ```{r}
-#Gene categories to exclude from variable genes
 bl <- c(GetSignature(SignatuR$Hs$Blocklists$Pseudogenes),
         GetSignature(SignatuR$Hs$Blocklists$HSP),
         GetSignature(SignatuR$Hs$Blocklists$`Non-coding`),
@@ -77,6 +100,53 @@ bl <- unique(bl)
 bl <- list("Blocklist"=bl)
 
 ```
+
+# Unsupervised STACAS integration
+
+```{r}
+for (i in 1:length(seurat.list)) {
+  seurat.list[[i]] <- NormalizeData(seurat.list[[i]])
+  seurat.list[[i]] <- FindVariableFeatures.STACAS(seurat.list[[i]],
+                                                  nfeat=nfeatures,
+                                                  genesBlockList = bl)
+}
+hvg <- SelectIntegrationFeatures(seurat.list, nfeatures = nfeatures)
+
+stacas_anchors <- FindAnchors.STACAS(seurat.list,
+                                     genesBlockList = bl,
+                                     anchor.features = hvg,
+                                     dims = 1:npcs)
+
+tree <- SampleTree.STACAS(stacas_anchors, obj.names = names(seurat.list),
+                          hclust.method = 'ward.D2')
+
+integrated.us <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=1:npcs,
+                                   sample.tree=tree)
+
+```
+
+See low-dim reductions
+```{r}
+integrated.us <- ScaleData(integrated.us) |> RunPCA(dims = 1:npcs) |>
+      RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed, n.neighbors = umap.neighbors,
+              metric = "cosine")
+
+DimPlot(integrated.us, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", label = T) +
+  ggtitle('STACAS - scGate_multi') + theme(aspect.ratio = 1)
+
+DimPlot(integrated.us, reduction = "umap",
+        group.by = "SampleLabel") + theme(aspect.ratio = 1)
+```
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated.us, file="cache/CD8T_integrated_unsup.rds")
+```
+
+# Semi-supervised STACAS integration
+
+We will use scGate labels to guide STACAS integration.
 
 ```{r}
 for (i in 1:length(seurat.list)) {
@@ -105,22 +175,35 @@ integrated <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=1:npcs,
 #integrated <- Run.STACAS(obj4int, anchor.features = 1000, cell.labels = "scGate_multi")
 ```
 
-# Reduced dimensionalities
+Reduced dimensionalities
 ```{r}
 integrated <- ScaleData(integrated) |> RunPCA(dims = 1:npcs) |>
       RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed, n.neighbors = umap.neighbors,
               metric = "cosine")
 ```
 
-# See results
+See results
 ```{r}
-DimPlot(integrated, reduction = "umap",
-        cols = mycols_scGate, group.by = "scGate_multi", label = T) +
+a <- DimPlot(integrated, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
   ggtitle('ssSTACAS - scGate_multi') + theme(aspect.ratio = 1)
 
-DimPlot(integrated, reduction = "umap",
-        group.by = "SampleLabel") + theme(aspect.ratio = 1)
+b <- DimPlot(integrated, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
 
+b | a
+
+ggsave("plots/umap_ssIntegration_1st.pdf", height=4, width=9)
+
+
+```
+
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated, file="cache/CD8T_integrated_1st.rds")
 ```
 
 ```{r fig.height=3.5}
@@ -178,10 +261,29 @@ integrated$functional.cluster[integrated$seurat_clusters %in% c(6)] <- "TPEX"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(7)] <- "MAIT"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(8)] <- NA
 
-to.keep <- colnames(integrated)[!is.na(integrated$functional.cluster)]
+```
+Expert annotation labels
+```{r}
+a <- DimPlot(integrated, reduction = "umap",
+        cols = mycols, group.by = "functional.cluster", raster = T) +
+  ggtitle('Exp annotation') + theme(aspect.ratio = 1)
 
+b <- DimPlot(integrated, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_ssIntegration_1st_wlabels.pdf", height=4, width=9)
+
+```
+Remove cells that cannot be labeled
+```{r}
+to.keep <- colnames(integrated)[!is.na(integrated$functional.cluster)]
 integrated <- subset(integrated, cells=to.keep)
 ```
+
 Re-do integration based on these labels
 ```{r}
 DefaultAssay(integrated) <- "RNA"
@@ -215,15 +317,23 @@ integrated2 <- ScaleData(integrated2) |> RunPCA(dims = 1:npcs) |>
 
 # See results
 ```{r}
-DimPlot(integrated2, reduction = "umap",
-        cols = mycols_scGate, group.by = "scGate_multi", label = T) +
-  ggtitle('ssSTACAS - scGate_multi') + theme(aspect.ratio = 1)
+a <- DimPlot(integrated2, reduction = "umap",
+        cols = mycols, group.by = "functional.cluster", raster = T) +
+  ggtitle('Exp annotation') + theme(aspect.ratio = 1)
 
-DimPlot(integrated2, reduction = "umap",
-        group.by = "functional.cluster", cols=mycols, label = T) +
-  ggtitle('ssSTACAS - second iteration') + theme(aspect.ratio = 1)
+b <- DimPlot(integrated2, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
 
+b | a
 ```
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated2, file="cache/CD8T_integrated_2nd.rds")
+```
+
 Re-cluster?
 ```{r}
 integrated2 <- FindNeighbors(integrated2, dims = 1:npcs)
@@ -248,6 +358,11 @@ DimPlot(integrated2, reduction = "umap",
         group.by = "functional.cluster", cols=mycols, label = T) +
   ggtitle('ssSTACAS - relabeled') + theme(aspect.ratio = 1)
 
+```
+
+Save object to evaluate metrics
+```{r}
+saveRDS(integrated2, file="cache/CD8T_integrated_2nd_relabel.rds")
 ```
 
 ```{r}

@@ -269,7 +269,7 @@ if (file.exists(cache_filename)) {
 } else {
   
 #  models <- scGate::get_scGateDB(branch = "dev", force_update = T)
-  models <- scGate::get_scGateDB(branch = "dev")
+  models <- scGate::get_scGateDB(version = 'v0.11') #fix version for reproducibility
   cd8.model <- models$human$generic$CD8TIL
   
   seurat.list <- sapply(names(seurat.list),
