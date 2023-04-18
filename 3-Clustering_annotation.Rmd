@@ -59,7 +59,7 @@ integrated$functional.cluster <- factor(integrated$functional.cluster, levels=na
 
 
 
-Find markers for unsupervised clusters
+Find markers for clusters - one cluster vs all the rest
 
 ```{r}
 Idents(integrated) <- "functional.cluster"
@@ -70,17 +70,11 @@ mean(table(integrated$functional.cluster,integrated$SampleLabel)>100)
 
 set.seed(1234)
 
-#marker.list <- ProjecTILs::FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
-#                                 min.cells.group=30, min.pct=0.3,
-#                                 max.cells.per.ident = 2000, logfc.threshold = 0.2,
-#                                 features = NULL, test.use = "wilcox",
-#                                 min.diff.pct=0.1, min.freq = 3/4, verbose = F, random.seed = 1, return.thresh=0.05)
-
 marker.list <- ProjecTILs::FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
                                  min.cells.group=30, min.pct=0.2,
                                  max.cells.per.ident = 1000, 
                                  features = NULL, test.use = "wilcox",
-                                 min.diff.pct=0.1, min.freq = 0.8, verbose = F, logfc.threshold = 0.2) #relax criteria except min.freq by group
+                                 min.diff.pct=0.1, min.freq = 0.8, verbose = F)
 
 
 genes <- lapply(marker.list, function(x) {
@@ -92,7 +86,6 @@ marker.list
 genes.use.bygroup <- unique(unlist(genes))
 genes.use.bygroup
 ```
-
 
 
 
@@ -115,66 +108,12 @@ node.marker.list <- split(node.marker, list(node.marker$pos,node.marker$cluster)
 node.marker.list
 
 node.genes <- lapply(node.marker.list, function(x) {
-  x$gene |> head(10)
+  x$gene |> head(5)
 })
 
 node.genes
 node.genes.use <- unique(unlist(node.genes))
 node.genes.use
-```
-
-
-# Alternative approach to find marker genes, using a cluster tree and calculating DEG hierarchically, calculated in each dataset/batch separately and ranking by occurrence
-
-```{r}
-
-FindAllMarkers.bygroup.byNode <- function (object, split.by = NULL, only.pos = FALSE, min.cells.group = 10, node=node, ...)  
-{
-    if (is.null(split.by)) {
-        stop("Please provide a grouping variable with 'split.by' parameter")
-    }
-    obj.list <- SplitObject(object, split.by = split.by)
-    
-    meta <- object[[]]
-    deg <- lapply(obj.list, function(x) {
-        FindAllMarkers(x, only.pos = only.pos, min.cells.group = min.cells.group, node=node,
-            ...)
-        
-    })
-    deg
-    ids <- unique(unlist(lapply(deg,function(x) x$cluster)))
-    
-    genes <- lapply(ids, function(i) {
-        this <- lapply(deg, function(x) {
-              x$gene[x$cluster==i]
-          })
-  
-        counts <- table(unlist(this))
-        sort(counts, decreasing = T)
-    })
-    
-    names(genes) <- ids
-    genes
-    
-
-}
-
-
-```
-
-
-```{r}
-node.markers <- FindAllMarkers.bygroup.byNode(integrated, split.by = "SampleLabel", node=8, min.diff.pct = 0.1, min.cells.group=30, max.cells.per.ident = 1000, min.pct=0.3, logfc.threshold = 0.25)
-node.markers
-
-node.genes <- lapply(node.markers, function(x) {
-  names(x) |> head(5)
-})
-
-node.genes
-node.genes.use <- unique(unlist(node.genes))
-node.genes.use
-
 ```
 
 
