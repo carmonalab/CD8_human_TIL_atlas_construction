@@ -43,10 +43,10 @@
     },
     "BiocManager": {
       "Package": "BiocManager",
-      "Version": "1.30.19",
+      "Version": "1.30.20",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "726b3bc83ff8e0c35c7efdb74a462b0d",
+      "Hash": "a7fca16a50b6ef7771b49d636dd54b57",
       "Requirements": []
     },
     "BiocNeighbors": {
@@ -230,8 +230,8 @@
       "RemoteRepo": "ProjecTILs",
       "RemoteUsername": "carmonalab",
       "RemoteRef": "dev",
-      "RemoteSha": "93b774ec677d1901a124fe4a946a0f2e9cc6aebc",
-      "Hash": "81d7e265e8b8cf98d8af8ffbf054c8d2",
+      "RemoteSha": "eb3335ee6a2835068d5ae72fab25a82768134c23",
+      "Hash": "b307fc62d5473f9fccdbac2c75c2c7b0",
       "Requirements": [
         "BiocParallel",
         "Matrix",
@@ -609,19 +609,6 @@
       "Repository": "CRAN",
       "Hash": "4f57884290cc75ab22f4af9e9d4ca862",
       "Requirements": []
-    },
-    "ape": {
-      "Package": "ape",
-      "Version": "5.7-1",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Hash": "10705eec964349f270504754d8fe8ef1",
-      "Requirements": [
-        "Rcpp",
-        "digest",
-        "lattice",
-        "nlme"
-      ]
     },
     "askpass": {
       "Package": "askpass",

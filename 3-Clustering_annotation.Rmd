@@ -60,9 +60,17 @@ integrated$functional.cluster <- factor(integrated$functional.cluster, levels=na
 
 Find markers for clusters - one cluster vs all the rest
 
+To find more discriminant marker genes, focus on differences in the lower range by trimming high values
+
+```{r}
+RNA_log_cutoff <- 1
+integrated@assays$RNA_trimmed <- integrated@assays$RNA
+integrated@assays$RNA_trimmed@data[integrated@assays$RNA_trimmed@data > RNA_log_cutoff] <- RNA_log_cutoff
+```
+
 ```{r}
 Idents(integrated) <- "functional.cluster"
-DefaultAssay(integrated) <- "RNA"
+DefaultAssay(integrated) <- "RNA_trimmed"
 
 sort(table(integrated$functional.cluster))
 mean(table(integrated$functional.cluster,integrated$SampleLabel)>100)
@@ -70,221 +78,43 @@ mean(table(integrated$functional.cluster,integrated$SampleLabel)>100)
 set.seed(1234)
 
 marker.list <- ProjecTILs::FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
-                                 min.cells.group=30, min.pct=0.2,
+                                 min.cells.group=30, 
                                  max.cells.per.ident = 1000, 
                                  features = NULL, test.use = "wilcox",
-                                 min.diff.pct=0.1, min.freq = 0.8, verbose = F)
-
-
-
+                                 min.diff.pct=0.1, min.freq = 2/3, verbose = F)
 
 genes <- lapply(marker.list, function(x) {
-  names(x) |> head(10)
+  names(x) |> head(6)
 })
 
-marker.list
-
-genes.use.bygroup <- unique(unlist(genes))
-genes.use.bygroup
+genes.use.bygroup.trimm <- unique(unlist(genes))
+genes.use.bygroup.trimm
 ```
 
-
-
-# Alternative approach to find marker genes, using a cluster tree and calculating DEG hierarchically
-
-```{r}
-library(ape)
-Idents(integrated) <- "functional.cluster"
-DefaultAssay(integrated) <- "RNA"
-
-integrated <- BuildClusterTree(integrated, dims=1:npcs) #features=integrated@assays$integrated@var.features
-integrated.clusterTree <- Tool(object = integrated, slot = 'BuildClusterTree')
-PlotClusterTree(integrated)
-```
-
-```{r}
-DefaultAssay(integrated) <- "RNA"
-
-node.marker <- FindAllMarkers(integrated, node=8, min.diff.pct = 0.3, min.cells.group=30, max.cells.per.ident = 1000, min.pct=0.3, logfc.threshold = 0.5)
-node.marker$pos <- node.marker$avg_log2FC>0
-node.marker.list <- split(node.marker, list(node.marker$pos,node.marker$cluster))
-node.marker.list
-
-node.genes <- lapply(node.marker.list, function(x) {
-  x$gene |> head(5)
-})
-
-node.genes
-node.genes.use <- unique(unlist(node.genes))
-node.genes.use
-```
-
-
-
-
-```{r}
-genes.use <- unique(c(node.genes.use,genes.use.bygroup))
-genes.use
-```
-
-
-```{r}
-celltype.heatmap2 <- function (data, assay = "RNA", genes, ref = NULL, scale = "row", 
-    method = c("ward.D2", "ward.D", "average"), brewer.palette = "RdBu", 
-    cluster.col = "functional.cluster", metadata = NULL, order.by = NULL, 
-    flip = FALSE, cluster_genes = FALSE, cluster_samples = FALSE, 
-    min.cells = 10, show_samplenames = FALSE, remove.NA.meta = TRUE, 
-    palette = NULL, breaks = seq(-2, 2, by = 0.1)) 
-{
-    set.seed(123)
-    method = method[1]
-    if (is.null(metadata)) {
-        stop("Must at least provide one metadata")
-    }
-    else {
-        meta.sub <- data@meta.data[, which(colnames(data@meta.data) %in% 
-            cluster.col), drop = F]
-        meta.sub <- cbind(meta.sub, data@meta.data[, metadata, 
-            drop = F])
-    }
-    meta.sub[meta.sub == "NA"] = NA
-    if (remove.NA.meta == TRUE) {
-        meta.sub <- drop_na(meta.sub)
-    }
-    data$metaSubset <- factor(apply(meta.sub, 1, paste, collapse = "!"))
-    t <- table(data$metaSubset)
-    accept <- names(t)[t > min.cells]
-    data <- subset(data, subset = metaSubset %in% accept)
-    m <- c()
-    genes.removed <- c()
-    for (g in unique(genes)) {
-        if (g %in% rownames(data@assays[[assay]])) {
-            m[[g]] <- tapply(data@assays[[assay]][g, ], data$metaSubset, 
-                mean)
-        }
-        else {
-            genes.removed <- c(genes.removed, g)
-        }
-    }
-    if (length(genes.removed) > 0) {
-        cat("These genes were not found in the assay and were excluded from plotting:", 
-            genes.removed)
-    }
-    m <- as.data.frame(m)
-    m <- m[accept, ]
-    m.subset <- factor(unlist(lapply(strsplit(rownames(m), "!", 
-        perl = T), function(x) x[[1]])))
-    m.meta <- list()
-    for (i in 1:length(metadata)) {
-        m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m), 
-            "!", perl = T), function(x) x[[i + 1]])))
-    }
-    names(m.meta) <- metadata
-    m.meta <- as.data.frame(m.meta)
-    m <- cbind(m, m.subset, m.meta)
-    if (!is.null(ref)) {
-        m$m.subset <- factor(m$m.subset, levels = levels(ref$functional.cluster))
-        m <- arrange(m, m.subset)
-        m.subset <- factor(unlist(lapply(strsplit(rownames(m), 
-            "!", perl = T), function(x) x[[1]])))
-    }
-    if (!is.null(order.by)) {
-        m <- arrange(m, m.subset, get(order.by))
-        m.meta <- list()
-        for (i in 1:length(metadata)) {
-            m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m), 
-                "!", perl = T), function(x) x[[i + 1]])))
-        }
-        names(m.meta) <- metadata
-    }
-    m <- m[1:(length(m) - length(metadata) - 1)]
-    
-    require(RColorBrewer)
-    color = colorRampPalette((brewer.pal(n = 7, name = brewer.palette)))(length(breaks))
-    palettes.default <- c("Paired", "Set2", "Accent", "Dark2", 
-        "Set1", "Set3")
-    if (is.null(palette)) {
-        palette <- list()
-        palette[["Subtype"]] <- colorRampPalette(brewer.pal(n = 8, 
-            name = "Set1"))(length(unique(unlist(m.subset))))
-        names(palette[["Subtype"]]) <- c(unique(m.subset))
-        for (i in 1:length(metadata)) {
-            meta <- metadata[i]
-            palette[[meta]] <- colorRampPalette(brewer.pal(n = 6, 
-                name = palettes.default[i]))(length(unique(m.meta[[meta]])))
-            names(palette[[meta]]) <- levels(m.meta[[meta]])
-        }
-    }
-    if (!is.null(ref)) {
-        palette[["Subtype"]] <- ref@misc$atlas.palette
-    }
-    annotation_col = data.frame(Subtype = m.subset)
-    annotation_col <- cbind(annotation_col, m.meta)
-    rownames(annotation_col) = rownames(m)
-    if (flip) {
-        h <- pheatmap::pheatmap(m, cluster_rows = cluster_samples, 
-            cluster_cols = cluster_genes, scale = scale, breaks = breaks, 
-            color = color, annotation_row = annotation_col, show_rownames = show_samplenames, 
-            border_color = NA, annotation_colors = palette, fontsize_row = 6, 
-            fontsize = 7, clustering_method = method)
-    }
-    else {
-        h <- pheatmap::pheatmap(t(m), cluster_rows = cluster_genes, 
-            cluster_cols = cluster_samples, scale = scale, breaks = breaks, 
-            color = color, annotation_col = annotation_col, show_colnames = show_samplenames, 
-            border_color = NA, annotation_colors = palette, fontsize_row = 6, 
-            fontsize = 7, clustering_method = method)
-    }
-    return(h)
-}
-```
-
-
-# focus on differences in the lower range
-```{r}
-RNA_cut <- 1
-integrated@assays$RNA_trunc <- integrated@assays$RNA
-integrated@assays$RNA_trunc@data[integrated@assays$RNA_trunc@data > RNA_cut] <- RNA_cut
-```
-
-
-
-```{r fig.height=6, fig.width=7}
-
-celltype.heatmap2(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA_trunc", genes = genes.use.bygroup, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="average", scale = "none", brewer.palette = "Blues", breaks = seq(0, 1, by = 0.1))
-
-
-celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA_trunc", genes = genes.use.bygroup, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="average", scale = "row")
-
-  
-```
 
 # Unsupervised heatmap
 
-```{r fig.height=6, fig.width=7}
-library(pheatmap)
 
-integrated@misc$atlas.palette <- mycols
+```{r fig.height=3, fig.width=5}
 
-h <- ProjecTILs::celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA", genes = genes.use, min.cells=30,
-                  ref=integrated, cluster_genes = T, cluster_samples = FALSE)
-ggsave("plots/CD8T_heatmap_pseudobulk_unclustered.pdf", plot=h, height=7.5, width=5.5)
+h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+                  assay = "RNA_trimmed", genes = genes.use.bygroup.trimm, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="average", scale = "none", brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
 
-h <- ProjecTILs::celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA", genes = genes.use, min.cells=30,
-                  ref=integrated, cluster_genes = TRUE, cluster_samples = TRUE, method="average")
-ggsave("plots/CD8T_heatmap_pseudobulk_clustered.pdf", plot=h, height=8.5, width=7.5)
+h
+
+ggsave("plots/CD8T_heatmap_pseudobulk_clustered_average.pdf", plot=h, height=4, width=5)
 
 
-h <- ProjecTILs::celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA", genes = genes.use, min.cells=30,
-                  ref=integrated, cluster_genes = TRUE, cluster_samples = TRUE, method="ward.D2")
-ggsave("plots/CD8T_heatmap_pseudobulk_clustered.w2.pdf", plot=h, height=8.5, width=7.5)
+h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+                  assay = "RNA_trimmed", genes = genes.use.bygroup.trimm, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="ward.D2", scale = "none", brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
+
+h
+
+ggsave("plots/CD8T_heatmap_pseudobulk_clustered_wardD2.pdf", plot=h, height=4, width=5)
+
 
 ```
+
 
 
 # Building reference from ssSTACAS integrated object
