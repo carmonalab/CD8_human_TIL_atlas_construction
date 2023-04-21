@@ -105,15 +105,16 @@ h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=
 h
 
 ggsave("plots/CD8T_heatmap_pseudobulk_clustered_average.pdf", plot=h, height=4, width=5)
+ggsave("plots/CD8T_heatmap_pseudobulk_clustered_average_big.pdf", plot=h, height=7, width=9)
 
 
 h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA_trimmed", genes = genes.use.bygroup.trimm, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="ward.D2", scale = "none", brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
+                  assay = "RNA_trimmed", genes = genes.use.bygroup.trimm, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="ward.D2", scale = "none", brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))  
 
 h
 
 ggsave("plots/CD8T_heatmap_pseudobulk_clustered_wardD2.pdf", plot=h, height=4, width=5)
-
+ggsave("plots/CD8T_heatmap_pseudobulk_clustered_wardD2_big.pdf", plot=h, height=7, width=9)
 
 ```
 
@@ -301,7 +302,7 @@ Idents(ref.cd8.downsample) <- "functional.cluster"
 VlnPlot(ref.cd8.downsample, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
 DefaultAssay(ref.cd8.downsample) <- "integrated"
 
-ggsave("plots/CD8_ref_subset_violins_ds.pdf", height=8, width=6)
+ggsave("plots/CD8_ref_subset_violins_ds.pdf", height=7, width=6)
 ```
 
 Subset composition by study / sample
