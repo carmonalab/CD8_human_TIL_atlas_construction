@@ -42,6 +42,8 @@ metric = "cosine"
 
 # Set up color palette
 mycols <- c('NaiveLike' = '#b7d2e0', 'CM' = '#da6f6f','EM'= '#72b28a','TEMRA' = '#e5bfaf', 'TPEX' = '#aca6e0' , 'TEX' ='#f5d39f', "MAIT" = '#fdbfd4')
+mycols_scGate <- c('CD8_N' = '#b7d2e0', 'CD8_EM'= '#72b28a','CD8_TEMRA' = '#e5bfaf', 'CD8_TPEX' = '#aca6e0' , 'CD8_TEX' ='#f5d39f', "CD8_MAIT" = '#fdbfd4')
+
 ```
 
 Rename cell types with CD8 prefix
@@ -192,9 +194,9 @@ ggsave("plots/umap_ssIntegration_2nd_wlabels.pdf", height=4, width=9)
 ```{r fig.height=4, fig.width=2.5}
 DefaultAssay(ref) <- "RNA"
 
-genes <- c('SELL','LEF1',"S1PR1", "TCF7", "CCR7","LMNA","IL7R","GZMA","GZMK",'CCL4',
-           "FGFBP2",'FCGR3A',"GNLY",'XCL1',"XCL2","CRTAM","GNG4","TOX",'PDCD1',
-           "GZMB","PRF1","LAG3","HAVCR2",'KLRB1','TRAV1-2')
+
+genes <- c('SELL','LEF1',"S1PR1","IL7R", "TCF7", "CCR7","LMNA","GZMA","GZMK","CCL4",     "FGFBP2",'FCGR3A',"GNLY","KLRG1",'XCL1',"XCL2","CXCL13","CRTAM","TOX",'PDCD1',"HAVCR2","LAG3","CTLA4","ITGAE","CXCR6",
+           "GZMB","PRF1",'KLRB1','TRAV1-2')
 
 VlnPlot(ref, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
 
@@ -294,14 +296,12 @@ ggsave("plots/umap_ssIntegration_downsample_wlabels.pdf", height=4, width=9)
 ```{r}
 DefaultAssay(ref.cd8.downsample) <- "RNA"
 Idents(ref.cd8.downsample) <- "functional.cluster"
-genes <- c('SELL','LEF1',"S1PR1","IL7R", "TCF7", "CCR7","LMNA","ANXA1","HOPX","GZMA","GZMK","CCL4",
-           "FGFBP2",'FCGR3A',"GNLY","KLRG1",'XCL1',"XCL2","CXCL13","CRTAM","TOX",'PDCD1',"HAVCR2","LAG3","CTLA4","ITGAE","CXCR6",
-           "GZMB","PRF1",'KLRB1','TRAV1-2')
+
 
 VlnPlot(ref.cd8.downsample, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
 DefaultAssay(ref.cd8.downsample) <- "integrated"
 
-ggsave("plots/CD8_ref_subset_violins_ds.pdf", height=12, width=6)
+ggsave("plots/CD8_ref_subset_violins_ds.pdf", height=8, width=6)
 ```
 
 Subset composition by study / sample
