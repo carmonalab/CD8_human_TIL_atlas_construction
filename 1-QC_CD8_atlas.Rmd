@@ -233,7 +233,7 @@ EnsemblGeneFile = "aux/EnsemblGenes105_Hsa_GRCh38.p13.txt.gz"
 # Homogenize features
 for(i in names(seurat.list)){
   print(i) 
-  seurat.list[[i]] <- STACAS:::standardizeGeneSymbols(seurat.list[[i]], EnsemblGeneFile = EnsemblGeneFile)
+  seurat.list[[i]] <- StandardizeGeneSymbols(seurat.list[[i]], EnsemblGeneFile = EnsemblGeneFile)
 }
 ```
 
@@ -268,8 +268,8 @@ if (file.exists(cache_filename)) {
   seurat.list <- readRDS(cache_filename)
 } else {
   
-#  models <- scGate::get_scGateDB(branch = "dev", force_update = T)
-  models <- scGate::get_scGateDB(version = 'v0.11') #fix version for reproducibility
+  models <- scGate::get_scGateDB(branch = "dev", force_update = T)
+#  models <- scGate::get_scGateDB(version = 'v0.11') #fix version for reproducibility
   cd8.model <- models$human$generic$CD8TIL
   
   seurat.list <- sapply(names(seurat.list),

@@ -14,8 +14,8 @@ output:
 ---
 
 ```{r, include=FALSE, fig.width=16, fig.height=12}
-library(renv)
-renv::restore()
+#library(renv)
+#renv::restore()
 library(Seurat)
 library(ggplot2)
 library(scGate)
@@ -23,7 +23,6 @@ library(STACAS)
 library(tidyverse)
 library(SignatuR)
 library(dplyr)
-options(future.globals.maxSize= 5000*1024^2)
 library(ProjecTILs)
 ```
 
@@ -35,7 +34,7 @@ myPath <- "~/Dropbox/CSI/Datasets/Human_TIL_Atlas/CD8/"
 path <- "./out/Utility.v0.4.CD8.integrated.stacas.semisup.rds"
 integrated <- readRDS(path)
 
-npcs = 30
+npcs = 50
 umap.min.dist = 0.3
 umap.neighbors = 30
 metric = "cosine"
@@ -100,7 +99,10 @@ genes.use.bygroup.trimm
 ```{r fig.height=3, fig.width=5}
 
 h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA_trimmed", genes = genes.use.bygroup.trimm, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="average", scale = "none", brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
+                  assay = "RNA_trimmed", genes = genes.use.bygroup.trimm,
+                  min.cells=30, ref=integrated, cluster_genes = T, palette = mycols,
+                  cluster_samples = TRUE, method="average", scale = "none",
+                  brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
 
 h
 
@@ -109,7 +111,11 @@ ggsave("plots/CD8T_heatmap_pseudobulk_clustered_average_big.pdf", plot=h, height
 
 
 h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA_trimmed", genes = genes.use.bygroup.trimm, min.cells=30, ref=integrated, cluster_genes = T, cluster_samples = TRUE, method="ward.D2", scale = "none", brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))  
+                  assay = "RNA_trimmed", palette = mycols,
+                  genes = genes.use.bygroup.trimm, min.cells=30,
+                  ref=integrated, cluster_genes = T, cluster_samples = TRUE,
+                  method="ward.D2", scale = "none", brewer.palette = "Blues",
+                  breaks = seq(0, RNA_log_cutoff, by = 0.1))  
 
 h
 

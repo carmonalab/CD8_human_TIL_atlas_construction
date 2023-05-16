@@ -1,0 +1,211 @@
+---
+title: "CD8 TIL integration with STACAS"
+author: "Paul Gueguen, Massimo Andreatta, and Santiago  Carmona"
+date: "`r format(Sys.Date(),'%e de %B, %Y')`"
+output: 
+  rmdformats::downcute:
+    lightbox: true
+    thumbnails: false
+    self_contained: true
+    gallery: true
+    code_folding: show
+  pkgdown:
+    as_is: true
+---
+
+```{r, include=FALSE, fig.width=16, fig.height=12}
+library(renv)
+renv::restore()
+library(Seurat)
+library(ggplot2)
+library(scGate)
+library(STACAS)
+library(SignatuR)
+library(dplyr)
+```
+
+We start from integrated collection of large and high-quality samples, generated using 2-Integration_STACAS.Rmd. Here we integrate the remaining datasets on top of the integrated 'reference' set.
+
+# Set up parameters
+
+```{r}
+path_output <- "./out/"
+npcs <- 50
+nfeatures <- 800
+seed <- 123
+set.seed(seed)
+umap.neighbors <- 30
+semisup=TRUE
+
+# Setup color palette
+mycols <- c('NaiveLike' = '#b7d2e0', 'CM' = '#da6f6f','EM'= '#72b28a','TEMRA' = '#e5bfaf', 'TPEX' = '#aca6e0' , 'TEX' ='#f5d39f', "MAIT" = '#fdbfd4')
+
+mycols_scGate <- c('CD8_N' = '#b7d2e0', 'CD8_EM'= '#72b28a','CD8_TEMRA' = '#e5bfaf', 'CD8_TPEX' = '#aca6e0' , 'CD8_TEX' ='#f5d39f', "CD8_MAIT" = '#fdbfd4')
+```
+
+# Load data
+
+```{r}
+seurat.all <- readRDS('cache/Seurat.list.Utility.v0.4_step6.rds')
+length(seurat.all)
+
+preintegrated <- readRDS('out/Utility.v0.4.CD8.integrated.stacas.semisup.rds')
+```
+
+Parameters
+```{r}
+npcs <- ncol(preintegrated@reductions$pca)
+hvg <- VariableFeatures(preintegrated)
+```
+
+Prepare data
+```{r}
+inref <- unique(preintegrated$SampleLabel)
+notinref <- setdiff(names(seurat.all), inref)
+seurat.all <- seurat.all[notinref]
+
+#small-scale test
+seurat.all <- seurat.all[100:105]
+seurat.all <- lapply(seurat.all, NormalizeData)
+
+#may want to exclude small samples
+n <- unlist(lapply(seurat.all, ncol))
+head(sort(n))
+```
+
+Prepare reference sets
+```{r}
+#copy assay
+preintegrated <- RenameAssays(preintegrated, integrated = "preintegrated")
+DefaultAssay(preintegrated) <- "preintegrated"
+```
+
+# Unsupervised STACAS integration
+
+We will use scGate labels to guide STACAS integration.
+
+```{r}
+ref <- list('reference'=preintegrated)
+seurat.list <- append(seurat.all, values=ref, after=0)
+
+sapply(seurat.list, DefaultAssay)
+
+stacas_anchors <- FindAnchors.STACAS(seurat.list,
+                                     reference = 1,
+                                     cell.labels = NULL,
+                                     anchor.features = hvg,
+                                     dims = 1:npcs)
+
+tree <- SampleTree.STACAS(stacas_anchors, obj.names = names(seurat.list))
+
+integrated <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=npcs,
+                                   sample.tree=tree)
+
+```
+
+
+Reduced dimensionalities
+```{r}
+integrated <- ScaleData(integrated) |> RunPCA(dims = 1:npcs) |>
+      RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed)
+```
+
+See results
+```{r}
+a <- DimPlot(integrated, reduction = "umap",
+        cols = mycols, group.by = "functional.cluster", raster = T) +
+  ggtitle('Annotation') + theme(aspect.ratio = 1)
+
+b <- DimPlot(integrated, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+```
+
+#Semi-supervised approach
+
+Predict CD8T subtypes using scGate
+```{r}
+# Setup function to run scGate + seurat pipeline
+run_seurat <- function(x, bl=NULL, nfeat=1000, npca=30) {
+  
+  x <- x %>% NormalizeData(verbose=F) %>%  
+      FindVariableFeatures.STACAS(nfeat = nfeat, genesBlockList = bl) %>%
+      ScaleData(verbose=F) %>%
+      RunPCA(npcs=npca, verbose=F) %>% RunUMAP(dims=1:npca, verbose=F)
+
+  return(x)
+}
+
+# define a function using variable object_in
+run_scGate_CD8T <- function(x, models) {
+
+  x <- scGate(x, model=models, multi.asNA=T, ncores=8,
+           reduction="pca", assay = "RNA")
+
+  return(x)
+}
+```
+
+```{r}
+scGate_models <- scGate::get_scGateDB(branch = "dev")
+
+cd8.til.models <- scGate_models$human$CD8_TIL
+cd8.til.models <- cd8.til.models[names(cd8.til.models) %in% c("CD8_Tinn","CD8_TRM") == FALSE]
+
+my.genes.blocklist <- SignatuR::GetSignature(SignatuR$Hs)
+
+names <- names(seurat.all)
+seurat.all <- lapply(
+  seq_along(seurat.all), 
+  function(i) {
+    print(sprintf("Dataset %i of %i", i, length(seurat.all)))
+    x <- seurat.all[[i]]
+    x <- run_seurat(x, bl=my.genes.blocklist, nfeat=1000, npca=30)
+    run_scGate_CD8T(x, models=cd8.til.models)
+  })
+names(seurat.all) <- names
+
+```
+
+```{r}
+ref <- list('reference'=preintegrated)
+seurat.list <- append(seurat.all, values=ref, after=0)
+
+sapply(seurat.list, DefaultAssay)
+
+stacas_anchors <- FindAnchors.STACAS(seurat.list,
+                                     reference = 1,
+                                     cell.labels = 'scGate_multi',
+                                     anchor.features = hvg,
+                                     dims = 1:npcs)
+
+tree <- SampleTree.STACAS(stacas_anchors, obj.names = names(seurat.list))
+
+integrated.ss <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=npcs,
+                                   sample.tree=tree)
+
+integrated.ss <- ScaleData(integrated.ss) |> RunPCA(dims = 1:npcs) |>
+      RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed)
+```
+
+See results
+```{r fig.width=10}
+a <- DimPlot(integrated.ss, reduction = "umap",
+        cols = mycols, group.by = "functional.cluster", raster = T) +
+  ggtitle('Annotation') + theme(aspect.ratio = 1)
+
+b <- DimPlot(integrated.ss, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+c <- DimPlot(integrated.ss, reduction = "umap",
+        group.by = "scGate_multi", cols = mycols_scGate, raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a | c
+```
