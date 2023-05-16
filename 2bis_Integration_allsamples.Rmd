@@ -65,7 +65,7 @@ notinref <- setdiff(names(seurat.all), inref)
 seurat.all <- seurat.all[notinref]
 
 #small-scale test
-seurat.all <- seurat.all[100:105]
+seurat.all <- seurat.all[101:150]
 seurat.all <- lapply(seurat.all, NormalizeData)
 
 #may want to exclude small samples
@@ -208,4 +208,43 @@ c <- DimPlot(integrated.ss, reduction = "umap",
         legend.key.size = unit(0.1, 'cm'))
 
 b | a | c
+```
+
+
+```{r eval=T}
+integrated.ss <- FindNeighbors(integrated.ss, dims = 1:npcs)
+integrated.ss <- FindClusters(integrated.ss, resolution = 0.5)
+
+DimPlot(integrated.ss, reduction = "umap", group.by = "seurat_clusters", label = T) + theme(aspect.ratio = 1)
+table(integrated.ss$scGate_multi, integrated.ss$seurat_clusters)
+table(integrated.ss$functional.cluster, integrated.ss$seurat_clusters)
+```
+Assign cluster names
+```{r}
+tab <- table(integrated.ss$seurat_clusters, integrated.ss$functional.cluster)
+tab
+
+newlabs <- apply(tab, 1, function(x) {
+  a <- which.max(x)
+  names(a)})
+
+integrated.ss$functional.cluster <- newlabs[integrated.ss$seurat_clusters]
+table(integrated.ss$functional.cluster)
+
+DimPlot(integrated.ss, reduction = "umap",
+        group.by = "functional.cluster", cols=mycols, label = T) +
+  ggtitle('ssSTACAS - relabeled') + theme(aspect.ratio = 1)
+
+```
+
+```{r fig.height=8, fig.width=5}
+DefaultAssay(integrated.ss) <- "RNA"
+Idents(integrated.ss) <- integrated.ss$functional.cluster
+genes <- c('SELL','LEF1', "TCF7", "CCR7","LMNA","IL7R","GZMK","CCL4",
+           "FGFBP2",'FCGR3A','XCL1',"XCL2",'GNG4',
+           "CRTAM","TOX",'PDCD1',"HAVCR2","LAG3","GZMB","PRF1",
+           'KLRB1','TRAV1-2','SLC4A10')
+VlnPlot(integrated.ss, pt.size = 0.1, features = genes, cols=mycols,
+        stack = TRUE, flip = TRUE, assay = "RNA", fill.by = "ident")
+DefaultAssay(integrated.ss) <- "integrated"
 ```
