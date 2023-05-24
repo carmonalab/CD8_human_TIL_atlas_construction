@@ -65,7 +65,9 @@ notinref <- setdiff(names(seurat.all), inref)
 seurat.all <- seurat.all[notinref]
 
 #small-scale test
-seurat.all <- seurat.all[101:150]
+#seurat.all <- seurat.all[101:150]
+
+
 seurat.all <- lapply(seurat.all, NormalizeData)
 
 #may want to exclude small samples

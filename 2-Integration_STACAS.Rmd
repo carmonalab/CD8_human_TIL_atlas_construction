@@ -234,35 +234,6 @@ FeaturePlot(integrated, features=c("XCL1","PRF1","LAG3","CTLA4","LMNA","GZMA"), 
 FeaturePlot(integrated, features=c("TRDC","TRDV1","TRDV2","TRGC1","TRGC2","TRAC"), ncol=3)
 DefaultAssay(integrated) <- "integrated"
 ```
-####TMP
-```{r fig.height=8, fig.width=13}
-library(UCell)
-library(patchwork)
-
-sigs <- list()
-sigs[["Tgd_1"]] <- c("TRDC","TRDV1")
-sigs[["Tgd_2"]] <- c("TRDC","TRDV2")
-sigs[["Tgd_3"]] <- c("TRDC","TRDV1","TRGC1","TRGC2")
-sigs[["Tgd_4"]] <- c("TRDC","TRDV2","TRGC1","TRGC2")
-sigs[["Tgd_5"]] <- c("TRDC","TRDV1","TRDV2","TRGC1","TRGC2")
-sigs[["Tgd_6"]] <- c("TRDC","TRDV2","TRAC-")
-
-DefaultAssay(integrated) <- 'RNA'
-integrated <- AddModuleScore_UCell(integrated, features = sigs, ncores = 4, name = NULL)
-
-FeaturePlot(integrated, features=c("Tgd_1","Tgd_2","Tgd_3","Tgd_4","Tgd_5","Tgd_6"), ncol=3)
-
-pll <- list()
-for (x in names(sigs)) {
-  n <- paste0(x, ".high")
-  integrated[[n]] <- 'low'
-  integrated[[n]][integrated[[x]]>0.2] <- 'high'
-  
-  pll[[x]] <- DimPlot(integrated, group.by = n)
-}
-wrap_plots(pll)
-
-```
 
 ```{r eval=T}
 integrated <- FindNeighbors(integrated, dims = 1:npcs)

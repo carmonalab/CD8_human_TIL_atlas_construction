@@ -197,12 +197,12 @@ ggsave("plots/umap_ssIntegration_2nd_wlabels.pdf", height=4, width=9)
 
 # Violin annotation
 
-```{r fig.height=4, fig.width=2.5}
+```{r fig.height=10, fig.width=5}
 DefaultAssay(ref) <- "RNA"
 
 
 genes <- c('SELL','LEF1',"S1PR1","IL7R", "TCF7", "CCR7","LMNA","GZMA","GZMK","CCL4",     "FGFBP2",'FCGR3A',"GNLY","KLRG1",'XCL1',"XCL2","CXCL13","CRTAM","TOX",'PDCD1',"HAVCR2","LAG3","CTLA4","ITGAE","CXCR6",
-           "GZMB","PRF1",'KLRB1','TRAV1-2')
+           "GZMB","PRF1",'KLRB1','TRAV1-2','SLC4A10')
 
 VlnPlot(ref, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
 
@@ -299,7 +299,7 @@ ggsave("plots/umap_ssIntegration_downsample_wlabels.pdf", height=4, width=9)
  
 # Violin annotation
 
-```{r}
+```{r fig.height=10, fig.width=5}
 DefaultAssay(ref.cd8.downsample) <- "RNA"
 Idents(ref.cd8.downsample) <- "functional.cluster"
 
