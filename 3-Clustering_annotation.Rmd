@@ -97,10 +97,9 @@ genes.use.bygroup.trimm
 
 
 ```{r fig.height=3, fig.width=5}
-
 h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
                   assay = "RNA_trimmed", genes = genes.use.bygroup.trimm,
-                  min.cells=30, ref=integrated, cluster_genes = T, palette = mycols,
+                  min.cells=30, ref=integrated, cluster_genes = T,
                   cluster_samples = TRUE, method="average", scale = "none",
                   brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
 
@@ -111,7 +110,7 @@ ggsave("plots/CD8T_heatmap_pseudobulk_clustered_average_big.pdf", plot=h, height
 
 
 h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA_trimmed", palette = mycols,
+                  assay = "RNA_trimmed",
                   genes = genes.use.bygroup.trimm, min.cells=30,
                   ref=integrated, cluster_genes = T, cluster_samples = TRUE,
                   method="ward.D2", scale = "none", brewer.palette = "Blues",

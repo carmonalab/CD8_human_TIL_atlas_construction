@@ -139,6 +139,23 @@ DimPlot(integrated.us, reduction = "umap",
 DimPlot(integrated.us, reduction = "umap",
         group.by = "SampleLabel") + theme(aspect.ratio = 1)
 ```
+Re-run scGate to check possible non-T cells
+```{r}
+library(scGate)
+#models <- scGate::get_scGateDB(branch = "dev", force_update = T)
+models <- scGate::get_scGateDB(version = 'v0.12') #fix version for reproducibility
+cd8.model <- models$human$generic$CD8TIL
+
+integrated.us <- scGate(integrated.us, model = cd8.model, reduction = 'pca', ncores=4)
+DimPlot(integrated.us)
+
+cells.keep <- colnames(integrated.us)[integrated.us$is.pure == "Pure"]
+
+# Remove non-pure T cells
+seurat.list <- lapply(seurat.list, function(x) {
+  subset(x, cells = colnames(x)[colnames(x) %in% cells.keep])
+})
+```
 
 Save object to evaluate metrics
 ```{r}
@@ -209,18 +226,47 @@ saveRDS(integrated, file="cache/CD8T_integrated_1st.rds")
 ```
 
 
-```{r fig.height=6}
+```{r fig.height=8, fig.width=13}
 DefaultAssay(integrated) <- "RNA"
-FeaturePlot(integrated, features=c("PDCD1","HAVCR2","TCF7","TRAV1-2","SLC4A10","CD200"), ncol=3)
+FeaturePlot(integrated, features=c("PDCD1","HAVCR2","TCF7","TRAV1-2","SLC4A10","KLRB1"), ncol=3)
 FeaturePlot(integrated, features=c("CCR7","CRTAM","TOX","IL7R","GZMB","GZMK"), ncol=3)
 FeaturePlot(integrated, features=c("XCL1","PRF1","LAG3","CTLA4","LMNA","GZMA"), ncol=3)
+FeaturePlot(integrated, features=c("TRDC","TRDV1","TRDV2","TRGC1","TRGC2","TRAC"), ncol=3)
 DefaultAssay(integrated) <- "integrated"
 ```
+####TMP
+```{r fig.height=8, fig.width=13}
+library(UCell)
+library(patchwork)
 
+sigs <- list()
+sigs[["Tgd_1"]] <- c("TRDC","TRDV1")
+sigs[["Tgd_2"]] <- c("TRDC","TRDV2")
+sigs[["Tgd_3"]] <- c("TRDC","TRDV1","TRGC1","TRGC2")
+sigs[["Tgd_4"]] <- c("TRDC","TRDV2","TRGC1","TRGC2")
+sigs[["Tgd_5"]] <- c("TRDC","TRDV1","TRDV2","TRGC1","TRGC2")
+sigs[["Tgd_6"]] <- c("TRDC","TRDV2","TRAC-")
+
+DefaultAssay(integrated) <- 'RNA'
+integrated <- AddModuleScore_UCell(integrated, features = sigs, ncores = 4, name = NULL)
+
+FeaturePlot(integrated, features=c("Tgd_1","Tgd_2","Tgd_3","Tgd_4","Tgd_5","Tgd_6"), ncol=3)
+
+pll <- list()
+for (x in names(sigs)) {
+  n <- paste0(x, ".high")
+  integrated[[n]] <- 'low'
+  integrated[[n]][integrated[[x]]>0.2] <- 'high'
+  
+  pll[[x]] <- DimPlot(integrated, group.by = n)
+}
+wrap_plots(pll)
+
+```
 
 ```{r eval=T}
 integrated <- FindNeighbors(integrated, dims = 1:npcs)
-integrated <- FindClusters(integrated, resolution = 0.5)
+integrated <- FindClusters(integrated, resolution = 0.7)
 
 DimPlot(integrated, reduction = "umap", group.by = "seurat_clusters", label = T) + theme(aspect.ratio = 1)
 table(integrated$scGate_multi, integrated$seurat_clusters)
@@ -228,7 +274,7 @@ table(integrated$scGate_multi, integrated$seurat_clusters)
 table(integrated$SampleLabel, integrated$seurat_clusters)
 ```
 
-```{r fig.height=8}
+```{r fig.height=10}
 # Heatmap
 markers <- FindAllMarkers(integrated, only.pos = TRUE, assay = "RNA")
 markers %>% group_by(cluster) %>% top_n(n = 15, wt = avg_log2FC) -> top15
@@ -256,14 +302,13 @@ table(integrated$scGate_multi, integrated$seurat_clusters)
 integrated$functional.cluster <- NA
 integrated$functional.cluster[integrated$seurat_clusters %in% c(0)] <- "EM"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(1)] <- "CM"
-integrated$functional.cluster[integrated$seurat_clusters %in% c(2)] <- "TEX"
+integrated$functional.cluster[integrated$seurat_clusters %in% c(2)] <- NA
 integrated$functional.cluster[integrated$seurat_clusters %in% c(3)] <- "TEX"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(4)] <- "NaiveLike"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(5)] <- "TPEX"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(6)] <- "TEMRA"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(7)] <- "MAIT"
 integrated$functional.cluster[integrated$seurat_clusters %in% c(8)] <- NA
-integrated$functional.cluster[integrated$seurat_clusters %in% c(9)] <- "EM"
 
 ```
 Expert annotation labels
@@ -381,6 +426,7 @@ VlnPlot(integrated2, pt.size = 0.1, features = genes, cols=mycols,
         stack = TRUE, flip = TRUE, assay = "RNA", fill.by = "ident")
 DefaultAssay(integrated2) <- "integrated"
 ```
+
 ```{r fig.height=6}
 DefaultAssay(integrated2) <- "RNA"
 FeaturePlot(integrated2, features=c("PDCD1","HAVCR2","TCF7","XCL2","XCL1","CD200"), ncol=3)
