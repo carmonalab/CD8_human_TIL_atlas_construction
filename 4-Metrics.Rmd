@@ -91,7 +91,7 @@ integrationMetrics[["Semi-supervised_2step"]] <- getIntegrationMetrics(object=in
 ```
 
 Combine integration metrics
-```{r fig.height=3}
+```{r fig.height=7}
 integrationMetricsSummary <- data.frame(unlist(integrationMetrics)) %>%
   tibble::rownames_to_column() %>%
   dplyr::rename(value=unlist.integrationMetrics.) %>%

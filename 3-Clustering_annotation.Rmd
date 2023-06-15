@@ -82,7 +82,7 @@ marker.list <- ProjecTILs::FindAllMarkers.bygroup(integrated, split.by = "Sample
                                  min.cells.group=30, 
                                  max.cells.per.ident = 1000, 
                                  features = NULL, test.use = "wilcox",
-                                 min.diff.pct=0.1, min.freq = 2/3, verbose = F)
+                                 min.diff.pct=0.05, min.freq = 2/3, verbose = F)
 
 genes <- lapply(marker.list, function(x) {
   names(x) |> head(6)
@@ -96,30 +96,33 @@ genes.use.bygroup.trimm
 # Unsupervised heatmap
 
 
-```{r fig.height=3, fig.width=5}
+```{r fig.height=5, fig.width=7}
+palettes <- list()
+
+integrated@misc$atlas.palette <- mycols
+
+palettes$Tissue <- colorRampPalette(brewer.pal(n = 8, 
+            name = "Set1"))(length(unique(integrated$Tissue)))
+names(palettes$Tissue) <- unique(integrated$Tissue)
+palettes$SampleLabel <- colorRampPalette(brewer.pal(n = 8, 
+            name = "Set2"))(length(unique(integrated$SampleLabel)))
+names(palettes$SampleLabel) <- unique(integrated$SampleLabel)
+
+cluster.method <- "average"
+#cluster.method <- "ward.D2"
+  
 h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
                   assay = "RNA_trimmed", genes = genes.use.bygroup.trimm,
-                  min.cells=30, ref=integrated, cluster_genes = T,
-                  cluster_samples = TRUE, method="average", scale = "none",
+                  min.cells=30, ref=integrated, cluster_genes = T, palette = palettes,
+                  cluster_samples = TRUE, method=cluster.method, scale = "none",
                   brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
 
 h
 
-ggsave("plots/CD8T_heatmap_pseudobulk_clustered_average.pdf", plot=h, height=4, width=5)
-ggsave("plots/CD8T_heatmap_pseudobulk_clustered_average_big.pdf", plot=h, height=7, width=9)
+ggsave(sprintf("plots/CD8T_heatmap_pseudobulk_clustered_%s.pdf", cluster.method), plot=h, height=4, width=5)
+ggsave(sprintf("plots/CD8T_heatmap_pseudobulk_clustered_%s_big.pdf", cluster.method), plot=h, height=5, width=9)
 
 
-h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
-                  assay = "RNA_trimmed",
-                  genes = genes.use.bygroup.trimm, min.cells=30,
-                  ref=integrated, cluster_genes = T, cluster_samples = TRUE,
-                  method="ward.D2", scale = "none", brewer.palette = "Blues",
-                  breaks = seq(0, RNA_log_cutoff, by = 0.1))  
-
-h
-
-ggsave("plots/CD8T_heatmap_pseudobulk_clustered_wardD2.pdf", plot=h, height=4, width=5)
-ggsave("plots/CD8T_heatmap_pseudobulk_clustered_wardD2_big.pdf", plot=h, height=7, width=9)
 
 ```
 
@@ -197,25 +200,33 @@ ggsave("plots/umap_ssIntegration_2nd_wlabels.pdf", height=4, width=9)
 
 # Violin annotation
 
-```{r fig.height=10, fig.width=5}
-DefaultAssay(ref) <- "RNA"
+```{r fig.height=5, fig.width=10}
+tmp <- ref
+
+tmp$functional.cluster <- factor(tmp$functional.cluster, levels=rev(levels(tmp$functional.cluster)))
+
+DefaultAssay(tmp) <- "RNA"
+Idents(tmp) <- "functional.cluster"
 
 
-genes <- c('SELL','LEF1',"S1PR1","IL7R", "TCF7", "CCR7","LMNA","GZMA","GZMK","CCL4",     "FGFBP2",'FCGR3A',"GNLY","KLRG1",'XCL1',"XCL2","CXCL13","CRTAM","TOX",'PDCD1',"HAVCR2","LAG3","CTLA4","ITGAE","CXCR6",
-           "GZMB","PRF1",'KLRB1','TRAV1-2','SLC4A10')
+genes <- c('SELL','LEF1',"S1PR1","IL7R", "TCF7", "CCR7",
+           "LMNA","GZMA","GZMK","CCL4","FGFBP2",'FCGR3A',"GNLY",
+           'XCL1',"XCL2","GNG4","CRTAM","TOX","CXCL13",'PDCD1',
+           "CXCR6","GZMB","PRF1","CTLA4","LAG3","HAVCR2",'KLRB1','SLC4A10','TRAV1-2')
 
-VlnPlot(ref, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
+v <- VlnPlot(tmp, features = genes, stack = TRUE, flip = TRUE, fill.by = "ident", cols = mycols)
 
 ggsave("plots/CD8_ref_subset_violins.pdf", height=12, width=6)
 
 #Horizontal version
 
-v <- VlnPlot(ref, features = genes, stack = TRUE, flip = FALSE, fill.by = "ident", cols = mycols)
+v <- VlnPlot(tmp, features = genes, stack = TRUE, flip = FALSE, fill.by = "ident", cols = mycols)
 
 ggsave("plots/CD8_ref_subset_violins_horizontal.pdf", plot=v, height=4, width=12)
 
-DefaultAssay(ref) <- "integrated"
+rm(tmp)
 
+v
 ```
 
 

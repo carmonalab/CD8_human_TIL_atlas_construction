@@ -102,10 +102,10 @@ run_seurat <- function(x, bl=NULL, nfeat=1000, npca=30) {
 }
 
 # define a function using variable object_in
-run_scGate_CD8T <- function(x, models) {
+run_scGate_CD8T <- function(x, models, reduction="pca") {
 
   x <- scGate(x, model=models, multi.asNA=T, ncores=8,
-           reduction="pca", assay = "RNA")
+           reduction=reduction, assay = "RNA")
 
   return(x)
 }
@@ -132,14 +132,16 @@ seurat.all <- lapply(
 names(seurat.all) <- names
 
 #Also run on reference objects
-preintegrated <- run_scGate_CD8T(preintegrated, models=cd8.til.models, reduction="pca")
+preintegrated <- run_scGate_CD8T(preintegrated, models=cd8.til.models)
 ```
 
 ```{r}
+DefaultAssay(preintegrated) <- "preintegrated"
 ref <- list('reference'=preintegrated)
 seurat.list <- append(seurat.all, values=ref, after=0)
 
-sapply(seurat.list, DefaultAssay)
+
+head(sapply(seurat.list, DefaultAssay))
 
 stacas_anchors <- FindAnchors.STACAS(seurat.list,
                                      reference = 1,

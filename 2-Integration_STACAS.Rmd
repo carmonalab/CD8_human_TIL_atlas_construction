@@ -138,6 +138,8 @@ DimPlot(integrated.us, reduction = "umap",
 
 DimPlot(integrated.us, reduction = "umap",
         group.by = "SampleLabel") + theme(aspect.ratio = 1)
+
+integrated.us$prelab <- integrated.us$scGate_multi
 ```
 Re-run scGate to check possible non-T cells
 ```{r}
@@ -152,13 +154,18 @@ DimPlot(integrated.us)
 cells.keep <- colnames(integrated.us)[integrated.us$is.pure == "Pure"]
 
 # Remove non-pure T cells
+integrated.us <- subset(integrated.us, cells = cells.keep)
+# also from individual objects
 seurat.list <- lapply(seurat.list, function(x) {
   subset(x, cells = colnames(x)[colnames(x) %in% cells.keep])
 })
+
 ```
 
 Save object to evaluate metrics
 ```{r}
+integrated.us$scGate_multi <- integrated.us$prelab
+
 saveRDS(integrated.us, file="cache/CD8T_integrated_unsup.rds")
 ```
 
@@ -247,13 +254,24 @@ table(integrated$SampleLabel, integrated$seurat_clusters)
 
 ```{r fig.height=10}
 # Heatmap
-markers <- FindAllMarkers(integrated, only.pos = TRUE, assay = "RNA")
-markers %>% group_by(cluster) %>% top_n(n = 15, wt = avg_log2FC) -> top15
+markers <- FindAllMarkers(integrated, only.pos = TRUE, assay = "RNA", min.pct = 0.2, min.diff.pct = 0.1)
+top15 <- markers %>% group_by(cluster) %>% top_n(n = 15, wt = avg_log2FC)
+
 Average <- AverageExpression(integrated, return.seurat = T, assay = "RNA")
 Average <- ScaleData(Average, features = rownames(markers))
+
 DoHeatmap(Average, features = top15$gene, draw.lines = F) + scale_fill_viridis_c() + theme(text = element_text(size = 9))
 ggsave("plots/HeatmapDEGs.png", height=12, width=6)
+```
 
+```{r}
+for (c in unique(markers$cluster)) {
+  sub <- markers[markers$cluster==c,]
+  print(sub)
+}
+```
+
+```{r fig.height=7}
 # Vlnplot
 DefaultAssay(integrated) <- "RNA"
 Idents(integrated) <- integrated$seurat_clusters
@@ -266,9 +284,11 @@ VlnPlot(integrated, pt.size = 0.1, features = genes,
 DefaultAssay(integrated) <- "integrated"
 ggsave("plots/CD8_ref_violins_clusters.png", height=12, width=6)
 ```
+
+
 Assign provisional annotations
 ```{r}
-table(integrated$scGate_multi, integrated$seurat_clusters)
+table(integrated$scGate_multi, integrated$seurat_clusters, useNA = "ifany")
 
 integrated$functional.cluster <- NA
 integrated$functional.cluster[integrated$seurat_clusters %in% c(0)] <- "EM"
@@ -298,9 +318,11 @@ b | a
 ggsave("plots/umap_ssIntegration_1st_wlabels.pdf", height=4, width=9)
 
 ```
+
 Remove cells that cannot be labeled
 ```{r}
 to.keep <- colnames(integrated)[!is.na(integrated$functional.cluster)]
+
 integrated <- subset(integrated, cells=to.keep)
 ```
 
