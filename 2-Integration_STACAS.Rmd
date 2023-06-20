@@ -435,3 +435,47 @@ Saving
 path <- paste0(path_output, "Utility.v0.4.CD8.integrated.stacas.semisup.rds")
 saveRDS(integrated2, path)
 ```
+
+# Integration with Harmony
+
+```{r fig.height=6}
+library(scIntegrationMetrics)
+
+merged <- Reduce(f=merge, x=seurat.list)
+
+merged <- FindVariableFeatures(merged, nfeatures = nfeatures) |> ScaleData() |>
+  RunPCA(npcs=npcs) |> RunUMAP(reduction = "pca", dims = 1:npcs, seed.use=seed, n.neighbors = umap.neighbors)
+
+a <- DimPlot(merged, reduction = "umap",
+        cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
+  ggtitle('scGate_multi') + theme(aspect.ratio = 1)
+
+b <- DimPlot(merged, reduction = "umap",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+```
+```{r}
+library(harmony)
+
+harmony <- RunHarmony(merged, group.by.vars = "SampleLabel")
+
+saveRDS(harmony, file="cache/CD8T_harmony.rds")
+```
+
+```{r fig.height=5}
+a <- DimPlot(harmony, reduction = "harmony",
+        cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
+  ggtitle('scGate_multi') + theme(aspect.ratio = 1)
+
+b <- DimPlot(harmony, reduction = "harmony",
+        group.by = "SampleLabel", raster = T) +
+  theme(aspect.ratio = 1, legend.text = element_text(size=7),
+        legend.key.size = unit(0.1, 'cm'))
+
+b | a
+
+ggsave("plots/umap_Harmony.pdf", height=4, width=9)
+```
