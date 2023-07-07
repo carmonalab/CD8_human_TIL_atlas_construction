@@ -59,8 +59,57 @@ integrated$functional.cluster <- factor(integrated$functional.cluster, levels=na
 ```
 
 
+# Find markers for clusters - as conserved DEG across multiple studies
 
-Find markers for clusters - one cluster vs all the rest
+```{r}
+Idents(integrated) <- "functional.cluster"
+DefaultAssay(integrated) <- "RNA"
+
+set.seed(1234)
+
+marker.list <- ProjecTILs::FindAllMarkers.bygroup(integrated, split.by = "SampleLabel",
+                                 min.cells.group=30,
+                                 max.cells.per.ident = 2000, 
+                                 features = integrated@assays$integrated@var.features,
+                                 test.use = "wilcox", logfc.threshold = 0.5,
+                                 min.diff.pct=0.05, min.freq = 0.8, verbose = F)
+
+genes <- lapply(marker.list, function(x) {
+  names(x) |> head(10)
+})
+
+genes.use.bygroup <- unique(unlist(genes))
+genes.use.bygroup
+```
+
+
+```{r fig.height=5, fig.width=7}
+palettes <- list()
+
+integrated@misc$atlas.palette <- mycols
+
+palettes$Tissue <- colorRampPalette(brewer.pal(n = 8, 
+            name = "Set1"))(length(unique(integrated$Tissue)))
+names(palettes$Tissue) <- unique(integrated$Tissue)
+palettes$SampleLabel <- colorRampPalette(brewer.pal(n = 8, 
+            name = "Set2"))(length(unique(integrated$SampleLabel)))
+names(palettes$SampleLabel) <- unique(integrated$SampleLabel)
+
+#cluster.method <- "average"
+cluster.method <- "ward.D2"
+  
+h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+                  assay = "RNA", genes = genes.use.bygroup,
+                  min.cells=30, ref=integrated, cluster_genes = T, palette = palettes,
+                  cluster_samples = TRUE, method=cluster.method, scale = "row",
+                  brewer.palette = "RdBu", palette_reverse = T)
+
+h
+
+ggsave(sprintf("plots/CD8T_heatmap_ps_clustered_%s.pdf", cluster.method), plot=h, height=5, width=9)
+
+```
+
 
 To find more discriminant marker genes, focus on differences in the lower range by trimming high values
 
@@ -94,7 +143,7 @@ genes.use.bygroup.trimm
 ```
 
 
-# Unsupervised heatmap
+Unsupervised heatmap with trimmed values
 
 
 ```{r fig.height=5, fig.width=7}
@@ -116,7 +165,7 @@ h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=
                   assay = "RNA_trimmed", genes = genes.use.bygroup.trimm,
                   min.cells=30, ref=integrated, cluster_genes = T, palette = palettes,
                   cluster_samples = TRUE, method=cluster.method, scale = "none",
-                  brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.1))
+                  brewer.palette = "Blues", breaks = seq(0, RNA_log_cutoff, by = 0.01))
 
 h
 
@@ -144,9 +193,10 @@ p
 ggsave("plots/CD8T_human_ref_v0.2.png", height = 4, width=6)
 
 # Adding scGate model to the object
-models <- scGate::get_scGateDB(branch = 'dev', force_update = T)
-gate.CD8.TIL <- models$human$generic$CD8TIL
-ref@misc$scGate$human <- gate.CD8.TIL
+models <- scGate::get_scGateDB(force_update = T)
+
+ref@misc$scGate$human <- models$human$generic$CD8TIL
+ref@misc$scGate$mouse <- models$mouse$generic$CD8T
 
 # Add color scheme to the object
 ref@misc$atlas.palette <- mycols
@@ -157,12 +207,12 @@ ref$functional.cluster <- factor(ref$functional.cluster, levels = names(mycols))
 
 ```
 
-```{r, eval=F}
+```{r, eval=T}
 # Saving
-path <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds"
+path <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v1_large.rds"
 saveRDS(ref, file = path)
 
-#ref.cd8 <- readRDS(file = "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds")
+#ref <- readRDS(file = "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v1_large.rds")
 ```
 
 
@@ -237,6 +287,26 @@ DotPlot(tmp, features = genes, cols="RdBu", scale=T, col.max=1.5) +
 ggsave("plots/CD8_ref_subset_dotplot.pdf", height=4, width=11)
 ```
 
+Subset composition by study / sample
+(this should be done on whole set without downsampling)
+
+```{r}
+tab <- table(ref$SampleLabel, ref$functional.cluster)
+tab.norm <- tab/rowSums(tab)
+
+df <- reshape2::melt(tab.norm)
+colnames(df) <- c("Study","Subtype","Frequency")
+
+palette <- ref@misc$atlas.palette
+
+ggplot(df, aes(x = Study, y = Frequency, 
+            fill = Subtype)) + geom_bar(stat = "identity") + 
+            theme_bw() + scale_fill_manual(values = mycols) +
+            theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+ggsave("plots/CD8T_subset_composition.pdf", width=7, height=4)
+```
+
 # Downsample reference
 
 ```{r eval=T}
@@ -253,12 +323,9 @@ ref.cd8.downsample <- ProjecTILs::make.reference(ref.cd8.downsample, ndim = npcs
 ref.cd8.downsample$functional.cluster <- factor(ref.cd8.downsample$functional.cluster, levels = names(mycols))
 
 #scGate models
-models <- scGate::get_scGateDB(branch = 'dev')
-gate.CD8.TIL <- models$human$generic$CD8TIL
-ref.cd8.downsample@misc$scGate$human <- gate.CD8.TIL
-
-gate.CD8.mouse <- models$mouse$generic$CD8T
-ref.cd8.downsample@misc$scGate$mouse <- gate.CD8.mouse
+models <- scGate::get_scGateDB(force_update = T)
+ref.cd8.downsample@misc$scGate$human <- models$human$generic$CD8TIL
+ref.cd8.downsample@misc$scGate$mouse <- models$mouse$generic$CD8T
 
 
 # Add color scheme to the object
@@ -269,16 +336,12 @@ p
 
 ```
 
-```{r, eval=F}
+```{r, eval=T}
 
-# Saving
-#path.ds <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2_ds.rds"
-path.ds <- "~/Dropbox/CSI/reference_atlases/CD8T_human_ref_v1.rds"
+path <- "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v1.rds"
+saveRDS(ref.cd8.downsample, file = path)
 
-saveRDS(ref.cd8.downsample, file = path.ds)
-
-
-
+#ref.cd8.downsamples <- readRDS(file = "~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v1.rds")
 ```
 
 ```{r}
@@ -328,22 +391,3 @@ DefaultAssay(ref.cd8.downsample) <- "integrated"
 ggsave("plots/CD8_ref_subset_violins_ds.pdf", height=7, width=6)
 ```
 
-Subset composition by study / sample
-(this should be done on whole set without downsampling)
-
-```{r}
-tab <- table(ref$SampleLabel, ref$functional.cluster)
-tab.norm <- tab/rowSums(tab)
-
-df <- reshape2::melt(tab.norm)
-colnames(df) <- c("Study","Subtype","Frequency")
-
-palette <- ref@misc$atlas.palette
-
-ggplot(df, aes(x = Study, y = Frequency, 
-            fill = Subtype)) + geom_bar(stat = "identity") + 
-            theme_bw() + scale_fill_manual(values = mycols) +
-            theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-
-ggsave("plots/CD8T_subset_composition.pdf", width=7, height=4)
-```
