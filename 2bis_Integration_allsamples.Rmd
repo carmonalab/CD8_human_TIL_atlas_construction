@@ -43,6 +43,10 @@ mycols <- c('NaiveLike' = '#b7d2e0', 'CM' = '#da6f6f','EM'= '#72b28a','TEMRA' = 
 mycols_scGate <- c('CD8_N' = '#b7d2e0', 'CD8_EM'= '#72b28a','CD8_TEMRA' = '#e5bfaf', 'CD8_TPEX' = '#aca6e0' , 'CD8_TEX' ='#f5d39f', "CD8_MAIT" = '#fdbfd4')
 ```
 
+
+To limit available memory and simulate a smaller machine, we can set a memory limit in .Renviron (local for this project) to e.g. R_MAX_VSIZE=64Gb
+NB! remember to comment out R_MAX_VSIZE after you're done!
+
 # Load data
 
 ```{r}
@@ -92,26 +96,32 @@ DefaultAssay(preintegrated) <- "preintegrated"
 
 # Unsupervised STACAS integration
 
-We will use scGate labels to guide STACAS integration.
+Decide whether to use scGate labels to guide STACAS integration (cell.labels param)
 
 ```{r}
-ref <- list('reference'=preintegrated)
-seurat.list <- append(seurat.all, values=ref, after=0)
+gc(reset=TRUE)
+t1 <- Sys.time()
 
-sapply(seurat.list, DefaultAssay)
+seurat.all <- append(seurat.all, values=list('reference'=preintegrated), after=0)
+#obj.names <- names(seurat.all)
 
-stacas_anchors <- FindAnchors.STACAS(seurat.list,
+stacas_anchors <- FindAnchors.STACAS(seurat.all,
                                      reference = 1,
                                      cell.labels = NULL,
                                      anchor.features = hvg,
                                      dims = 1:npcs)
 
-tree <- SampleTree.STACAS(stacas_anchors, obj.names = names(seurat.list))
+rm(seurat.all, preintegrated) #no longer needed, free up memory
+gc()
 
-integrated <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=npcs,
-                                   sample.tree=tree)
+integrated <- IntegrateData.STACAS(anchorset=stacas_anchors, dims=npcs)
+
+#Time elapsed
+t2 <- Sys.time()
+t2-t1
 
 ```
+
 
 
 Reduced dimensionalities
@@ -139,10 +149,6 @@ c <- DimPlot(sub, reduction = "umap",
   ggtitle('Annotation') + theme(aspect.ratio = 1)
 
 b | c
-```
-```{r}
-rm(seurat.all)
-gc()
 ```
 
 

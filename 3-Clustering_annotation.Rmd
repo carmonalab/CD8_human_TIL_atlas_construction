@@ -377,6 +377,12 @@ ggsave("plots/umap_ssIntegration_downsample_wlabels.pdf", height=4, width=9)
 
 ```
 
+```{r}
+DimPlot(ref.cd8.downsample, reduction = "umap",
+        cols = ref.cd8.downsample@misc$atlas.palette,
+        group.by = "functional.cluster", label = T) + 
+  theme(aspect.ratio = 1) + NoLegend()
+```
  
 # Violin annotation
 
