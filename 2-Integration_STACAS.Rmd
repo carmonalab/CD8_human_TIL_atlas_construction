@@ -57,6 +57,7 @@ which.sets <- names(sorted[1:n])
 seurat.list <- seurat.list[which.sets]
 ```
 
+
 # Simple merge of the data
 
 Without any integration, what is the extent of batch effects? how are batch/label metrics?
@@ -84,6 +85,17 @@ ggsave("plots/umap_preintegration.pdf", height=4, width=9)
 #Save object to evaluate metrics
 saveRDS(merged, file="cache/CD8T_unintegrated.rds")
 ```
+
+Also export in h5ad format, to be read by scipy
+```{r}
+library(SeuratDisk)
+to.conv <- DietSeurat(merged, counts=T, scale.data = F)
+#to.conv$scGate_multi[is.na(to.conv$scGate_multi)] <- "unknown"
+SaveH5Seurat(to.conv, filename = "cache/merged.h5Seurat", overwrite = T)
+Convert("cache/merged.h5Seurat", dest = "h5ad", overwrite = T)
+```
+
+
 Gene categories to exclude from variable genes
 ```{r}
 bl <- c(GetSignature(SignatuR$Hs$Blocklists$Pseudogenes),
@@ -457,20 +469,23 @@ b <- DimPlot(merged, reduction = "umap",
 
 b | a
 ```
+
 ```{r}
 library(harmony)
+set.seed(123)
 
 harmony <- RunHarmony(merged, group.by.vars = "SampleLabel")
+harmony <- RunUMAP(harmony, reduction = "harmony", dims=1:50)
 
 saveRDS(harmony, file="cache/CD8T_harmony.rds")
 ```
 
-```{r fig.height=5}
-a <- DimPlot(harmony, reduction = "harmony",
+```{r fig.height=5, width=10}
+a <- DimPlot(harmony, reduction = "umap",
         cols = mycols_scGate, group.by = "scGate_multi", raster = T) +
   ggtitle('scGate_multi') + theme(aspect.ratio = 1)
 
-b <- DimPlot(harmony, reduction = "harmony",
+b <- DimPlot(harmony, reduction = "umap",
         group.by = "SampleLabel", raster = T) +
   theme(aspect.ratio = 1, legend.text = element_text(size=7),
         legend.key.size = unit(0.1, 'cm'))

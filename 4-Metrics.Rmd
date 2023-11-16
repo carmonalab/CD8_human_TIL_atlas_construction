@@ -37,6 +37,19 @@ harmony <- readRDS("cache/CD8T_harmony.rds")
 annotated <- readRDS("~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds")
 ```
 
+Convert scANVI object
+```{r}
+h5ad_file = "out/scANVI_integrated_CD8.h5ad"
+
+Convert(h5ad_file, dest = "h5seurat", assay="RNA", overwrite = TRUE)
+scanvi <- LoadH5Seurat("out/scANVI_integrated_CD8.h5seurat", misc=FALSE, meta.data=FALSE)
+
+merged.meta <- merged@meta.data[,c("SampleLabel","scGate_multi")]
+scanvi <- AddMetaData(scanvi, merged.meta)
+scanvi@reductions$pca <- scanvi@reductions$emb
+```
+
+
 ```{r}
 # Setup color palette
 mycols <- c('NaiveLike' = '#b7d2e0', 'CM' = '#da6f6f','EM'= '#72b28a','TEMRA' = '#e5bfaf', 'TPEX' = '#aca6e0' , 'TEX' ='#f5d39f', "MAIT" = '#fdbfd4')
@@ -50,12 +63,15 @@ a <- DimPlot(merged, group.by = "scGate_multi", cols = mycols_scGate) +
 b <- DimPlot(integrated.unsup, group.by = "scGate_multi", cols = mycols_scGate) + 
   ggtitle("STACAS") + NoLegend() + theme(aspect.ratio = 1)
 c <- DimPlot(integrated.ss, group.by = "scGate_multi", cols = mycols_scGate) +
-  ggtitle("ssSTACAS (1)") + NoLegend() + theme(aspect.ratio = 1)
+  ggtitle("ssSTACAS (1)") + theme(aspect.ratio = 1)
 d <- DimPlot(integrated.ss.2nd, group.by = "scGate_multi", cols = mycols_scGate) + 
-  ggtitle("ssSTACAS (2)") +  theme(aspect.ratio = 1)
-e <- DimPlot(harmony, reduction="harmony", group.by = "scGate_multi", cols = mycols_scGate) +
-  ggtitle("Harmony") + theme(aspect.ratio = 1)
-(a | b | c) / (d | e)
+  ggtitle("ssSTACAS (2)") + NoLegend() + theme(aspect.ratio = 1)
+e <- DimPlot(harmony, group.by = "scGate_multi", cols = mycols_scGate) +
+  ggtitle("Harmony") + NoLegend() + theme(aspect.ratio = 1)
+f <- DimPlot(scanvi, group.by = "scGate_multi", cols = mycols_scGate) +
+  ggtitle("scANVI") + theme(aspect.ratio = 1)
+
+(a | b | c) / (d | e | f)
 ```
 
 Subset on the same cells to calculate metrics (some cells were removed during integration)
@@ -65,6 +81,7 @@ cells.us <- colnames(integrated.unsup)
 cells.i1 <- colnames(integrated.ss)
 cells.i2 <- colnames(integrated.ss.2nd)
 cells.ha <- colnames(harmony)
+cells.sc <- colnames(scanvi)
 
 cells.keep <- intersect(cells.merged, cells.i2)
 
@@ -73,12 +90,13 @@ merged <- subset(merged, cells=cells.keep)
 integrated.unsup <- subset(integrated.unsup, cells=cells.keep)
 integrated.ss <- subset(integrated.ss, cells=cells.keep)
 integrated.ss.2nd <- subset(integrated.ss.2nd, cells=cells.keep)
-harmomy <- subset(harmony, cells=cells.keep)
+harmony <- subset(harmony, cells=cells.keep)
+scanvi <- subset(scanvi, cells=cells.keep)
 ```
 
 Calculate integration metrics based on scGate labels (prior knowledge from standard markers)
 ```{r}
-#Integration metrics on uncorrected data
+#Integration metrics
 integrationMetrics <- list()
 
 metricsLabels <- NULL  #use all labels
@@ -111,6 +129,11 @@ integrationMetrics[["Harmony"]] <- getIntegrationMetrics(object=harmony,
                                                       method.reduction = "harmony",
                                                       metricsLabels = metricsLabels)
 
+integrationMetrics[["scanvi"]] <- getIntegrationMetrics(object=scanvi,
+                                                      meta.label = meta.label,
+                                                      meta.batch = meta.batch,
+                                                      metricsLabels = metricsLabels)
+
 ```
 
 Combine integration metrics
@@ -123,7 +146,7 @@ integrationMetricsSummary <- data.frame(unlist(integrationMetrics)) %>%
 
 integrationMetricsSummary$Method <- factor(integrationMetricsSummary$Method,
                                            levels=c("Uncorrected","STACAS",
-                                                    "ssSTACAS(1)","ssSTACAS(2)","Harmony"))
+                                                    "ssSTACAS(1)","ssSTACAS(2)","Harmony","scanvi"))
 
 ggplot(integrationMetricsSummary, aes(x=Method, y=value, fill=Method)) + geom_bar(stat="identity") + 
     theme_bw()  +
@@ -136,6 +159,8 @@ ggplot(integrationMetricsSummary, aes(x=Method, y=value, fill=Method)) + geom_ba
 
 Scatterplot of two performance metrics
 ```{r fig.width=8, fig.height=4}
+library(RColorBrewer)
+library(tidyverse)
 palette <- brewer.pal(n=length(unique(integrationMetricsSummary$Method)), name = "Set1")
 
 a <- integrationMetricsSummary %>% dplyr::filter(Metric %in% c("celltype_ASW","CiLISI")) %>%
