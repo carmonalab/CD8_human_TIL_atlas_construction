@@ -35,7 +35,7 @@ nfeatures <- 800
 seed <- 123
 set.seed(seed)
 umap.neighbors <- 30
-semisup=TRUE
+semisup=FALSE
 
 # Setup color palette
 mycols <- c('NaiveLike' = '#b7d2e0', 'CM' = '#da6f6f','EM'= '#72b28a','TEMRA' = '#e5bfaf', 'TPEX' = '#aca6e0' , 'TEX' ='#f5d39f', "MAIT" = '#fdbfd4')
@@ -50,7 +50,7 @@ NB! remember to comment out R_MAX_VSIZE after you're done!
 # Load data
 
 ```{r}
-seurat.all <- readRDS('cache/Seurat.list.Utility.v0.4_step6.rds')
+seurat.all <- readRDS('cache/Seurat.list.Utility.v0.4_step7.rds')
 length(seurat.all)
 
 preintegrated <- readRDS('out/Utility.v0.4.CD8.integrated.stacas.semisup.rds')
