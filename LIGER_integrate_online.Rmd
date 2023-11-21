@@ -168,7 +168,10 @@ merged[["iNMF"]] <- CreateDimReducObject(
 merged <- RunUMAP(merged, dims = 1:ncol(merged[["iNMF"]]), reduction = "iNMF")
 
 DimPlot(merged, group.by = "SampleLabel") + theme(aspect.ratio=1) + NoLegend()
-DimPlot(merged, group.by = "scGate_multi", cols=mycols_scGate) + theme(aspect.ratio=1)
+
+p <- DimPlot(merged, group.by = "scGate_multi", cols=mycols_scGate) + theme(aspect.ratio=1)
+p
+ggsave("plots/liger_largescale_integration_byscGate.pdf", plot=p, height=4, width=6)
 ```
 Save results
 ```{r}
@@ -177,6 +180,7 @@ saveRDS(merged, "cache/liger_integrated_allsamples.rds")
 
 Find clusters and markers
 ```{r}
+set.seed(123)
 merged <- FindNeighbors(merged, reduction="iNMF", dims = 1:npcs)
 merged <- FindClusters(merged, resolution = 0.1)
 
