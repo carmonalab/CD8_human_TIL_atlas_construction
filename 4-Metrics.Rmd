@@ -40,10 +40,11 @@ annotated <- readRDS("~/Dropbox/CSI/Datasets/projectTils/CD8T_human_ref_v0.2.rds
 
 Convert scANVI object
 ```{r}
+library(SeuratDisk)
 h5ad_file = "out/scANVI_integrated_CD8.h5ad"
 
-Convert(h5ad_file, dest = "h5seurat", assay="RNA", overwrite = TRUE)
-scanvi <- LoadH5Seurat("out/scANVI_integrated_CD8.h5seurat", misc=FALSE, meta.data=FALSE)
+SeuratDisk::Convert(h5ad_file, dest = "h5seurat", assay="RNA", overwrite = TRUE)
+scanvi <- SeuratDisk::LoadH5Seurat("out/scANVI_integrated_CD8.h5seurat", misc=FALSE, meta.data=FALSE)
 
 merged.meta <- merged@meta.data[,c("SampleLabel","scGate_multi")]
 scanvi <- AddMetaData(scanvi, merged.meta)
@@ -182,6 +183,13 @@ a <- integrationMetricsSummary %>% dplyr::filter(Metric %in% c("celltype_ASW","C
 a
 
 ggsave("plots/CD8T_metrics_scatterplot_wliger.pdf", height=3, width=5)
+
+#Save source data
+source <- integrationMetricsSummary %>% dplyr::filter(Metric %in% c("celltype_ASW","CiLISI")) %>%
+  pivot_wider(names_from = Metric, values_from = value )
+
+write.csv(x=as.data.frame(source), file="aux/CD8T_metrics.csv")
+
 ```
 
 Use final annotations

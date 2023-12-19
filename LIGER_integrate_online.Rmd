@@ -197,8 +197,12 @@ genes <- c('SELL','LEF1',"S1PR1","IL7R", "TCF7", "CCR7",
            'XCL1',"XCL2","GNG4","CRTAM","TOX","CXCL13",'PDCD1',
            "CXCR6","GZMB","PRF1","CTLA4","LAG3","HAVCR2",'KLRB1','SLC4A10','TRAV1-2')
 
-DotPlot(merged, features = genes, cols="RdBu", scale=T, col.max=1.5) +
+p <- DotPlot(merged, features = genes, cols="RdBu", scale=T, col.max=1.5) +
   theme(axis.text.x = element_text(angle = 45, hjust=1))
 
+p
 ggsave("plots/liger_allsamples_dotplot.pdf", height=4, width=11)
+
+#Save source data
+write.csv(x=p$data, file="aux/CD8T_liger_dotplot_source.csv")
 ```

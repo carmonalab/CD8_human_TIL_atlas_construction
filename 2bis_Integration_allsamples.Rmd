@@ -260,10 +260,14 @@ DefaultAssay(integrated) <- "integrated"
 
 ```{r fig.width=12, fig.height=4}
 DefaultAssay(integrated) <- 'RNA'
-DotPlot(integrated, features = genes, cols="RdBu", scale=T, col.max=1.5) +
+p <- DotPlot(integrated, features = genes, cols="RdBu", scale=T, col.max=1.5) +
   theme(axis.text.x = element_text(angle = 45, hjust=1))
 
+p
 ggsave("plots/large_allsamples_dotplot.pdf", height=4, width=11)
+
+#Save source data
+write.csv(x=p$data, file="aux/CD8T_largescale_dotplot_source.csv")
 ```
 
 ## Look for conserved signal between all these datasets

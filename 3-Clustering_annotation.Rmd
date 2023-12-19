@@ -107,6 +107,26 @@ h <- celltype.heatmap(integrated, cluster.col = 'functional.cluster',  metadata=
 h
 
 ggsave(sprintf("plots/CD8T_heatmap_ps_clustered_%s.pdf", cluster.method), plot=h, height=5, width=9)
+```
+
+```{r fig.height=5, fig.width=7}
+#Source data (use local modified version, to return actual heatmap values)
+source("functions.R")
+m <- celltype.heatmap.local(integrated, cluster.col = 'functional.cluster',  metadata=c("SampleLabel", "Tissue"),
+                  assay = "RNA", genes = genes.use.bygroup,
+                  min.cells=30, ref=integrated, cluster_genes = T, palette = palettes,
+                  cluster_samples = TRUE, method=cluster.method, scale = "row",
+                  return.matrix = T,
+                  brewer.palette = "RdBu", palette_reverse = T)
+
+write.csv(m, file="aux/CD8T_heatmap_matrix.csv")
+
+#Check we get the same heatmap
+#breaks = seq(-2, 2, by = 0.1)
+#color <- colorRampPalette(rev(RColorBrewer::brewer.pal(n = 7, name = "RdBu")))(length(breaks))
+#pheatmap::pheatmap(m, cluster_rows = TRUE, cluster_cols = TRUE, scale = "none", show_colnames = FALSE,
+#                   breaks = breaks, color = color, border_color = NA, clustering_method = "ward.D2")
+
 
 ```
 
@@ -281,10 +301,14 @@ v
 Dotplot visualization
 ```{r fig.width=12, fig.height=4}
 DefaultAssay(tmp) <- "RNA"
-DotPlot(tmp, features = genes, cols="RdBu", scale=T, col.max=1.5) +
+p <- DotPlot(tmp, features = genes, cols="RdBu", scale=T, col.max=1.5) +
   theme(axis.text.x = element_text(angle = 45, hjust=1))
 
+p
 ggsave("plots/CD8_ref_subset_dotplot.pdf", height=4, width=11)
+
+#Save source data
+write.csv(x=p$data, file="aux/CD8T_dotplot_source.csv")
 ```
 
 Subset composition by study / sample
@@ -305,6 +329,9 @@ ggplot(df, aes(x = Study, y = Frequency,
             theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 ggsave("plots/CD8T_subset_composition.pdf", width=7, height=4)
+
+write.csv(x=tab.norm, file="aux/CD8T_seed_composition.csv")
+
 ```
 
 # Downsample reference
